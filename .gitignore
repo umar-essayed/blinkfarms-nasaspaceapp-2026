@@ -1,0 +1,28 @@
+# Frontend and auxiliary assets (to be added in later commits)
+blinkui/
+blinkfarms/
+docs/
+submission/
+vid-propsal/
+assets/
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.mp3
+*.wav
+
+# Markdown files (excluded as requested)
+*.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+.env*
+.venv
+env/
+venv/
+.pytest_cache/
