@@ -18,9 +18,40 @@
 
 ---
 
+## 📸 System Screenshots & Visual Walkthrough
+
+Here is a live walkthrough of the deployed platform across its three core operational screens:
+
+### 1. Real-Time Field Telemetry & Satellite Radar Dashboard
+> **Live Parcel Monitoring:** GPS parcel boundaries for hyper-arid reclamation projects (e.g., West Minya 1.5M Feddan Project / Toshka Basin), featuring real-time canopy temperature ($20.8^\circ\text{C}$ with early stomatal closure tracking), morning irrigation quota ($347.1 \text{ m}^3/\text{fed}$), safe spray hour windows, root-zone moisture profile ($65.6\%$), and a 14-day flash drought safety radar.
+
+<div align="center">
+  <img src="./screenshots/01_field_radar_dashboard.jpg" alt="BlinkFarms Real-Time Field Telemetry and Satellite Radar Dashboard" width="900" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+</div>
+
+<br/>
+
+### 2. 3-Year / 6-Season Crop Succession & Economic Feasibility Roadmap
+> **Pareto-Optimal Agro-Ecological Rotations:** Dynamic TOPSIS recommendation engine selecting certified cultivars (e.g., Garlic winter succession in West Minya/Toshka), delivering $+120\text{k EGP/feddan}$ seasonal net margin, $+687\text{k EGP/feddan}$ cumulative 3-year farm return, $6\%$ net irrigation water savings ($781\text{ m}^3/\text{fed}$ conserved), and subsoil biodrilling hardpan remediation.
+
+<div align="center">
+  <img src="./screenshots/02_crop_succession_planner.png" alt="BlinkFarms 3-Year Crop Succession Roadmap" width="900" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+</div>
+
+<br/>
+
+### 3. BlinkAI Agronomic Voice & Text Field Advisory
+> **Domain-Grounded Intelligence:** Bilingual (English & Egyptian Arabic) advisory engine coupled with the 16-dimensional `FieldMemoryStore`. Learns farm history across seasons, cross-references 5 years of historical NASA POWER weather patterns, and provides actionable sowing dates, fertilizer programs, and water quotas based on Egyptian Agricultural Research Center (ARC) certified varieties.
+
+<div align="center">
+  <img src="./screenshots/03_blinkai_field_chat.png" alt="BlinkAI Agronomic Field Chat and Voice Advisory" width="900" style="border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);" />
+</div>
+
+---
+
 ## 📌 Executive Summary & The Problem on the Ground
 
-Hyper-arid reclaimed basins—such as the **Toshka Depression and East Oweinat in Egypt's Western Desert**—represent strategic national breadbaskets. However, farming in these extreme environments faces three critical biophysical vulnerabilities:
+Hyper-arid reclaimed basins—such as the **Toshka Depression, East Oweinat, and West Minya in Egypt**—represent strategic national breadbaskets. However, farming in these extreme environments faces three critical biophysical vulnerabilities:
 
 1. **The 14-Day Optical Remote Sensing Blind Spot:**  
    Standard satellite monitoring relies on NDVI or EVI greenness indices. By the time a satellite detects optical browning or canopy discoloration, the crop's stomatal conductance has already been collapsed for 10 to 14 days, causing irreversible vascular cavitation and severe yield loss.
@@ -103,7 +134,7 @@ Crop succession is solved via Technique for Order Preference by Similarity to Id
 ### 5. Crop Yield & Field Economics ($S_{\text{econ}}$ v3.0)
 Yield realization is computed using the FAO-33 Stewart water-deficit equation:
 $$1 - \frac{Y_a}{Y_m} = K_y \left(1 - \frac{\text{ET}_a}{\text{ET}_c}\right)$$
-Economic margins are grounded in authentic Egyptian Ministry of Agriculture procurement bulletin prices (e.g., Wheat at 13,333 EGP/ton, Maize at 13,570 EGP/ton, Faba Bean at 24,000 EGP/ton):
+Economic margins are grounded in authentic Egyptian Ministry of Agriculture procurement bulletin prices (e.g., Wheat at 13,333 EGP/ton, Maize at 13,570 EGP/ton, Faba Bean at 24,000 EGP/ton, Garlic at 25,000 EGP/ton):
 $$\text{Net Profit} = (Y_a \times P_{\text{producer}}) - C_{\text{baseline}} + \Delta_{\text{Fertilizer Savings}} + \Delta_{\text{Pumping Savings}}$$
 * **Zero Double-Counting:** Distinguishes cleanly between single-season margins and 3-year cumulative succession margins.
 
@@ -125,7 +156,7 @@ BlinkFarms was benchmarked against genuine published eddy covariance flux tower 
 
 ```
 blinkfarms/
-├── blinkengine/                   # Python Biophysical Scientific Microservice
+├── blinkengine/                   # Python Biophysical Scientific Microservice (Port 8000)
 │   ├── api_server.py              # FastAPI microservice with REST endpoints
 │   ├── crop_rotation_engine.py    # 6-Season succession optimizer (DSSAT/AquaCrop)
 │   ├── economic_engine.py         # S_econ v3.0 farm-gate profitability ledger
@@ -133,52 +164,137 @@ blinkfarms/
 │   ├── models.py                  # Analytical formulas (Penman-Monteith, Stewart, ESI)
 │   ├── nasa_client.py             # Live NASA POWER, SMAP & Earthdata ingestion
 │   └── tests/                     # 100% precision scientific verification suite
-└── blinkui/                       # Modern Next.js 14 Web Application
-    ├── src/app/                   # App Router (Bilingual Arabic/English)
-    ├── src/components/            # Interactive farm HUD & crop succession components
-    │   ├── AgronomicWizard.tsx    # Interactive field configuration & telemetry ingestion
-    │   ├── CropRotationPlanner.tsx# 3-Year succession roadmap & economic ledger
-    │   ├── FarmerMorningVitals.tsx# Daily morning briefing & 14-day drought radar
-    │   ├── NasaScienceLabModal.tsx# Transparent biophysical equation inspector
-    │   └── SplitFieldMap.tsx      # Multi-parcel satellite zone visualizer
-    └── src/lib/                   # Python bridge client & biophysical types
+├── blinkui/                       # Modern Next.js 14 Web Application (Port 3000)
+│   ├── src/app/                   # App Router (Bilingual Arabic/English)
+│   ├── src/components/            # Interactive farm HUD & crop succession components
+│   │   ├── AgronomicWizard.tsx    # Interactive field configuration & telemetry ingestion
+│   │   ├── CropRotationPlanner.tsx# 3-Year succession roadmap & economic ledger
+│   │   ├── FarmerMorningVitals.tsx# Daily morning briefing & 14-day drought radar
+│   │   ├── NasaScienceLabModal.tsx# Transparent biophysical equation inspector
+│   │   └── SplitFieldMap.tsx      # Multi-parcel satellite zone visualizer
+│   └── src/lib/                   # Python bridge client & biophysical types
+└── screenshots/                   # High-resolution platform demonstration images
 ```
 
 ---
 
-## 🚀 Live Demo & Getting Started
+## 🚀 Complete Installation, Configuration & Execution Guide
 
-### Prerequisites
-* **Python 3.10+**
-* **Node.js 18+ & npm**
+### Architecture & Port Allocation
 
-### 1. Run the Python Biophysical Engine
+| Component | Technology | Default Port | Internal URL | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **BlinkEngine Backend** | Python 3.10+ / FastAPI / Uvicorn | `8000` | `http://127.0.0.1:8000` | NASA ingestion, biophysical models, TOPSIS optimizer |
+| **BlinkUI Frontend** | Next.js 14 / TypeScript / Tailwind | `3000` | `http://localhost:3000` | Farmer cockpit, interactive map, bilingual voice/text advisor |
+
+The frontend communicates seamlessly with the engine via the environment variable `NEXT_PUBLIC_PYTHON_ENGINE_URL=http://127.0.0.1:8000`.
+
+---
+
+### Step 1: Clone the Repository
 ```bash
-cd blinkengine
-python -m venv venv
-# On Windows:
-.\venv\Scripts\activate
-# On Linux/macOS:
-source venv/bin/activate
-
-pip install -r requirements.txt
-python api_server.py
+git clone https://github.com/umar-essayed/blinkfarms-nasaspaceapp-2026.git
+cd blinkfarms-nasaspaceapp-2026
 ```
-*The engine boots up at `http://127.0.0.1:8000` with interactive Swagger docs at `/docs`.*
 
-### 2. Run the Verification Suite
-Execute the master audit suite that validates all 7 scientific pillars:
+---
+
+### Step 2: Set Up and Run the Python Engine (Port 8000)
+
+1. **Navigate to the engine directory:**
+   ```bash
+   cd blinkengine
+   ```
+
+2. **Create and activate a virtual environment:**
+   ```bash
+   # On Windows (PowerShell):
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+
+   # On Windows (CMD):
+   python -m venv venv
+   .\venv\Scripts\activate.bat
+
+   # On Linux / macOS:
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+
+4. **Launch the FastAPI microservice on Port 8000:**
+   ```bash
+   python -m uvicorn api_server:app --host 127.0.0.1 --port 8000 --reload
+   ```
+   *Output confirmation:*
+   ```text
+   INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+   INFO:     Started reloader process
+   INFO:     Application startup complete.
+   ```
+
+5. **Verify Engine Health & Endpoints:**
+   * Health Check: [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
+   * Interactive Swagger Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+   * Redoc Documentation: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+---
+
+### Step 3: Run the Verification & Benchmark Suite (Zero Synthetic Data)
+In the same virtual environment, run the master scientific test suite:
 ```bash
 python tests/test_master_validation_suite.py
 ```
-
-### 3. Run the Next.js Frontend
-```bash
-cd ../blinkui
-npm install
-npm run dev
+*Expected Result:*
+```text
+================================================================================
+🏆 ALL 7 PILLARS PASSED WITH 100% MATHEMATICAL & PHYSICAL PRECISION!
+Total Execution Time: ~0.20 seconds | ZERO MOCK DATA | READY FOR NASA SUBMISSION
+================================================================================
 ```
-*Open [http://localhost:3000](http://localhost:3000) in your browser.*
+
+---
+
+### Step 4: Set Up and Run the Next.js Frontend (Port 3000)
+
+1. **Open a new terminal and navigate to the UI directory:**
+   ```bash
+   cd ../blinkui
+   ```
+
+2. **Install Node.js packages:**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables (Optional):**
+   The application defaults to `http://127.0.0.1:8000`. To customize, create a `.env.local` file:
+   ```env
+   NEXT_PUBLIC_PYTHON_ENGINE_URL=http://127.0.0.1:8000
+   ```
+
+4. **Start the Next.js development server:**
+   ```bash
+   npm run dev
+   ```
+   *Output confirmation:*
+   ```text
+   - ready started server on 0.0.0.0:3000, url: http://localhost:3000
+   ```
+
+5. **Open the Application:**
+   Navigate to **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+6. **Production Build & Execution (Optional):**
+   ```bash
+   npm run build
+   npm run start
+   ```
 
 ---
 
@@ -200,5 +316,5 @@ npm run dev
 ## 🏆 NASA Space Apps Challenge 2026
 
 * **Category:** Field Shift: Cultivating Climate-Resilient Agriculture
-* **Region of Interest:** Toshka Depression & East Oweinat, New Valley Governorate, Egypt
+* **Region of Interest:** Toshka Depression, East Oweinat, and West Minya Reclaimed Basins, Egypt
 * **Open Source License:** MIT License — Developed for open humanitarian and scientific agricultural advancement.
