@@ -454,7 +454,7 @@ export default function SplitFieldMap({
   };
 
   return (
-    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[420px] lg:h-[480px] xl:h-[500px] rounded-3xl overflow-hidden border border-[#384536]/15 shadow-md bg-[#222822] select-none">
+    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[400px] lg:h-[430px] xl:h-[440px] rounded-3xl overflow-hidden border border-[#384536]/15 shadow-md bg-[#222822] select-none">
       {/* Real Interactive Leaflet Satellite Canvas (Clean, High-Res, Zero Flashing) */}
       <div
         ref={mapContainerRef}

@@ -636,34 +636,50 @@ export default function BlinkFarmsApp() {
             TAB 1: HOME / FIELD RADAR
            ========================================================================= */}
         {activeTab === 'radar' && (
-          <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-7 animate-fadeIn items-start">
-            {/* 1. CRYSTAL-CLEAR SATELLITE MAP */}
-            <div className="w-full min-w-0 lg:col-span-7 xl:col-span-7">
-              <SplitFieldMap
-                lat={currentLat}
-                lon={currentLon}
-                fieldName={displayFieldName}
-                lang={lang}
-                onLocationChange={handleLocationChange}
-                onCustomPolygonChange={handleCustomPolygonChange}
-                isShockActive={telemetry.isFlashDroughtAlert}
-                polygonBoundary={activePolygonBoundary}
-                subParcels={selectedPresetId === 'custom' ? undefined : activePreset?.internalSubParcels}
-              />
+          <div className="space-y-5 animate-fadeIn">
+            {/* ROW 1: SATELLITE MAP (7 COLS) + CORE DECISIONS & HEALTH RING (5 COLS) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+              {/* 1. CRYSTAL-CLEAR SATELLITE MAP */}
+              <div className="w-full min-w-0 lg:col-span-7 xl:col-span-7">
+                <SplitFieldMap
+                  lat={currentLat}
+                  lon={currentLon}
+                  fieldName={displayFieldName}
+                  lang={lang}
+                  onLocationChange={handleLocationChange}
+                  onCustomPolygonChange={handleCustomPolygonChange}
+                  isShockActive={telemetry.isFlashDroughtAlert}
+                  polygonBoundary={activePolygonBoundary}
+                  subParcels={selectedPresetId === 'custom' ? undefined : activePreset?.internalSubParcels}
+                />
+              </div>
+
+              {/* 2. Operations Side Card: Health Ring & 3 Daily Decisions */}
+              <div className="w-full min-w-0 lg:col-span-5 xl:col-span-5">
+                <FarmerMorningVitals
+                  telemetry={telemetry}
+                  vitals={unifiedVitals}
+                  areaFeddan={currentAreaFeddan}
+                  lang={lang}
+                  mode="side_decisions"
+                  onOpenScienceModal={(tab, eqId, targetMetric) =>
+                    setScienceModalConfig({ isOpen: true, tab: tab || 'diagnostic', eqId, targetMetric: targetMetric || 'health' })
+                  }
+                />
+              </div>
             </div>
 
-            {/* Daily Field Operations Center (Spacious & Clean Beside Map on Desktop) */}
-            <div className="w-full min-w-0 lg:col-span-5 xl:col-span-5">
-              <FarmerMorningVitals
-                telemetry={telemetry}
-                vitals={unifiedVitals}
-                areaFeddan={currentAreaFeddan}
-                lang={lang}
-                onOpenScienceModal={(tab, eqId, targetMetric) =>
-                  setScienceModalConfig({ isOpen: true, tab: tab || 'diagnostic', eqId, targetMetric: targetMetric || 'health' })
-                }
-              />
-            </div>
+            {/* ROW 2: DEEP SCIENCE GAUGES UNDER MAP (FULL WIDTH ACROSS DASHBOARD) */}
+            <FarmerMorningVitals
+              telemetry={telemetry}
+              vitals={unifiedVitals}
+              areaFeddan={currentAreaFeddan}
+              lang={lang}
+              mode="bottom_gauges"
+              onOpenScienceModal={(tab, eqId, targetMetric) =>
+                setScienceModalConfig({ isOpen: true, tab: tab || 'diagnostic', eqId, targetMetric: targetMetric || 'health' })
+              }
+            />
           </div>
         )}
 
