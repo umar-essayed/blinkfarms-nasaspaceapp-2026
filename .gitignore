@@ -1,10 +1,13 @@
-# Frontend and auxiliary assets (to be added in later commits)
-blinkui/
+# Auxiliary assets (to be added in later commits)
 blinkfarms/
 docs/
 submission/
 vid-propsal/
 assets/
+blinkui/node_modules/
+blinkui/.next/
+blinkui/.env*
+!blinkui/.env.example
 *.png
 *.jpg
 *.jpeg
