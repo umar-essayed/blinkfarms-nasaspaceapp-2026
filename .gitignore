@@ -18,6 +18,7 @@ blinkui/.env*
 # Markdown files (excluded as requested)
 *.md
 !NASA_DATA_SOURCES_AND_SATELLITES.md
+!NASA_SUBMISSION_RESOURCES.md
 
 # Python
 __pycache__/
