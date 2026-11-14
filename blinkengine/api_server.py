@@ -858,6 +858,105 @@ def search_field_analogues_endpoint(req: AnalogueSearchRequest):
         "top_analogues": analogues
     }
 
+# ==============================================================================
+# AUDIT TRAIL & FULL GLASS-BOX EXECUTION LOGGER ENDPOINTS
+# ==============================================================================
+class AuditExecuteRequest(BaseModel):
+    field_id: str = "EG_TOSHKA_SECTOR_04"
+    farm_name: str = "مشروع توشكى الخير — واحة باريس والنخيل والقمح"
+    lat: float = 22.580
+    lon: float = 31.520
+    boundary_polygon: Optional[List[List[float]]] = None
+    area_feddan: float = 125.0
+    soil_type: str = "reclaimed_sand"
+    irrigation_system: str = "pivot"
+    baseline_crop: str = "wheat"
+    candidate_crops: Optional[List[str]] = None
+    priorities: Optional[Dict[str, float]] = None
+
+@app.post("/api/v1/audit/execute")
+def execute_audited_field_analysis_endpoint(req: AuditExecuteRequest):
+    """
+    Executes end-to-end audited pipeline from spatial polygon and NASA telemetry
+    through all 24 equations, TOPSIS, XAI, and generates complete execution ledger.
+    """
+    from audit_logger import run_audited_field_pipeline
+    poly = req.boundary_polygon or [
+        [req.lat - 0.005, req.lon - 0.005],
+        [req.lat - 0.005, req.lon + 0.005],
+        [req.lat + 0.005, req.lon + 0.005],
+        [req.lat + 0.005, req.lon - 0.005],
+        [req.lat - 0.005, req.lon - 0.005],
+    ]
+    res = run_audited_field_pipeline(
+        field_id=req.field_id,
+        farm_name=req.farm_name,
+        center_lat=req.lat,
+        center_lon=req.lon,
+        boundary_polygon=poly,
+        area_feddan=req.area_feddan,
+        soil_type=req.soil_type,
+        irrigation_system=req.irrigation_system,
+        baseline_crop=req.baseline_crop,
+        candidate_crops=req.candidate_crops,
+        priorities=req.priorities
+    )
+    return res
+
+@app.get("/api/v1/audit/latest")
+def get_latest_audit_endpoint():
+    """
+    Returns the metadata and paths for the latest audited execution run.
+    """
+    from audit_logger import get_latest_audit_run
+    latest = get_latest_audit_run()
+    if not latest:
+        raise HTTPException(status_code=404, detail="No audit runs recorded yet.")
+    return {
+        "success": True,
+        "latest": latest
+    }
+
+@app.get("/api/v1/audit/runs")
+def list_audit_runs_endpoint(limit: int = 20):
+    """
+    Returns a list of all historical audit runs.
+    """
+    from audit_logger import list_audit_runs
+    runs = list_audit_runs(limit=limit)
+    return {
+        "success": True,
+        "count": len(runs),
+        "runs": runs
+    }
+
+@app.get("/api/v1/audit/runs/{run_id}")
+def get_specific_audit_run_endpoint(run_id: str):
+    """
+    Fetches the full execution trace JSON and markdown report for a specific run.
+    """
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    run_dir = os.path.join(curr_dir, "audit_runs", run_id)
+    trace_file = os.path.join(run_dir, "execution_trace.json")
+    report_file = os.path.join(run_dir, "audit_report.md")
+
+    if not os.path.exists(trace_file) or not os.path.exists(report_file):
+        raise HTTPException(status_code=404, detail=f"Audit run '{run_id}' not found.")
+
+    with open(trace_file, "r", encoding="utf-8") as f:
+        trace_data = json.load(f)
+
+    with open(report_file, "r", encoding="utf-8") as f:
+        report_md = f.read()
+
+    return {
+        "success": True,
+        "run_id": run_id,
+        "metadata": trace_data.get("metadata", {}),
+        "trace": trace_data,
+        "report_markdown": report_md
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api_server:app", host="127.0.0.1", port=8000, reload=False)
