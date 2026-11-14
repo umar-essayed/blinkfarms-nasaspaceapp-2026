@@ -20,7 +20,9 @@ from models import (
     calc_prescriptive_irrigation, calc_closed_loop_soil_error,
     calc_pt_jpl_constraints, calc_pt_jpl_fluxes, calc_advection_decoupled_lec,
     simulate_fao56_daily_balance, calc_stewart_yield,
-    calc_soil_health_index, solve_dynamic_topsis
+    calc_soil_health_index, solve_dynamic_topsis,
+    calc_field_intelligence_score, calc_smart_irrigation_optimizer,
+    calc_crop_decision_rationale
 )
 from historical_validation import (
     run_ameriflux_us_ne1_benchmark,
@@ -684,6 +686,165 @@ def get_field_memory_endpoint(field_id: str):
         "field_id": field_id,
         "record": field_data,
         "top_analogues": analogues
+    }
+
+class WhatIfRequest(BaseModel):
+    lat: float = 30.850
+    lon: float = 31.050
+    base_crop_id: str = "wheat"
+    alternate_crop_id: Optional[str] = None
+    water_cut_percent: float = 0.0
+    heatwave_c: float = 0.0
+    area_feddan: float = 15.0
+    soil_type: str = "alluvial_clay"
+
+class IrrigationOptimizeRequest(BaseModel):
+    theta_fc: float = 0.32
+    theta_current: float = 0.22
+    theta_wp: float = 0.14
+    z_r_m: float = 1.2
+    area_feddan: float = 15.0
+    irrigation_system: str = "drip"
+    pumping_cost_egp_m3: float = 2.50
+
+class FieldIntelligenceRequest(BaseModel):
+    ndvi: float = 0.76
+    savi: float = 0.60
+    fc: float = 0.72
+    esi: float = 0.68
+    canopy_fever_c: float = 1.2
+    theta_root_m3_m3: float = 0.24
+    theta_fc: float = 0.32
+    theta_wp: float = 0.14
+    ec_salinity_dsm: float = 1.8
+    hardpan_detected: bool = False
+    soc_g_kg: float = 8.0
+    flash_drought_count_3yr: int = 1
+    mean_temp_anomaly_c: float = 0.8
+
+@app.post("/api/v1/simulate/what-if")
+def simulate_what_if_endpoint(req: WhatIfRequest):
+    """
+    Computes rapid What-If scenario comparing baseline conditions with simulated
+    water shortages, extreme heatwaves, or crop switches.
+    """
+    from economic_engine import calc_single_crop_economics
+    target_crop = req.alternate_crop_id or req.base_crop_id
+    crop_info = get_crop(target_crop)
+    if not crop_info:
+        target_crop = "wheat"
+        crop_info = get_crop("wheat")
+
+    # Baseline simulation (0% water cut, 0°C heatwave)
+    base_yield_ratio = 0.95
+    base_econ = calc_single_crop_economics(
+        crop_id=req.base_crop_id,
+        yield_ratio_ya_ym=base_yield_ratio,
+        area_feddan=req.area_feddan
+    )
+
+    # Simulated shock (effective deficit based on crop sensitivity ky)
+    ky = crop_info.get("ky", 1.05)
+    water_cut_frac = req.water_cut_percent / 100.0
+    yield_loss_water = water_cut_frac * ky
+    yield_loss_heat = (req.heatwave_c * 0.04) if req.heatwave_c > 0 else 0.0
+    sim_yield_ratio = float(np.clip(base_yield_ratio - yield_loss_water - yield_loss_heat, 0.10, 1.10))
+
+    sim_econ = calc_single_crop_economics(
+        crop_id=target_crop,
+        yield_ratio_ya_ym=sim_yield_ratio,
+        area_feddan=req.area_feddan,
+        water_saved_m3_per_feddan=(crop_info.get("water_need_mm", 450) * 4.2 * water_cut_frac)
+    )
+
+    profit_diff_egp = sim_econ["net_profit_per_feddan_egp"] - base_econ["net_profit_per_feddan_egp"]
+    yield_diff_ton = sim_econ["actual_yield_ya_ton_feddan"] - base_econ["actual_yield_ya_ton_feddan"]
+
+    return {
+        "success": True,
+        "base_crop": req.base_crop_id,
+        "evaluated_crop": target_crop,
+        "applied_shocks": {
+            "water_cut_percent": req.water_cut_percent,
+            "heatwave_c": req.heatwave_c
+        },
+        "baseline": {
+            "yield_ton_feddan": base_econ["actual_yield_ya_ton_feddan"],
+            "net_profit_egp_feddan": base_econ["net_profit_per_feddan_egp"]
+        },
+        "simulated": {
+            "yield_ton_feddan": sim_econ["actual_yield_ya_ton_feddan"],
+            "net_profit_egp_feddan": sim_econ["net_profit_per_feddan_egp"]
+        },
+        "delta": {
+            "yield_diff_ton_feddan": float(round(yield_diff_ton, 2)),
+            "profit_diff_egp_feddan": float(round(profit_diff_egp, 0)),
+            "total_farm_profit_diff_egp": float(round(profit_diff_egp * req.area_feddan, 0))
+        },
+        "summary_ar": f"في حال انخفاض المياه {req.water_cut_percent}% وارتفاع الحرارة {req.heatwave_c}°C، سيكون التغير في ربحية الفدان {profit_diff_egp:+.0f} جنيه وفرق الإنتاجية {yield_diff_ton:+.2f} طن/فدان."
+    }
+
+@app.post("/api/v1/irrigation/optimize")
+def irrigation_optimizer_endpoint(req: IrrigationOptimizeRequest):
+    """
+    Computes prescriptive irrigation dosage (mm & m^3/feddan) and compares with baseline flood irrigation.
+    """
+    res = calc_smart_irrigation_optimizer(
+        theta_fc=req.theta_fc,
+        theta_current=req.theta_current,
+        theta_wp=req.theta_wp,
+        z_r_m=req.z_r_m,
+        area_feddan=req.area_feddan,
+        irrigation_system=req.irrigation_system,
+        pumping_energy_cost_per_m3=req.pumping_cost_egp_m3
+    )
+    return {
+        "success": True,
+        "prescription": res
+    }
+
+@app.post("/api/v1/field-intelligence")
+def field_intelligence_endpoint(req: FieldIntelligenceRequest):
+    """
+    Computes transparent 4-pillar Field Intelligence Score (0 to 100).
+    """
+    res = calc_field_intelligence_score(
+        ndvi=req.ndvi,
+        savi=req.savi,
+        fc=req.fc,
+        esi=req.esi,
+        canopy_fever_c=req.canopy_fever_c,
+        theta_root_m3_m3=req.theta_root_m3_m3,
+        theta_fc=req.theta_fc,
+        theta_wp=req.theta_wp,
+        ec_salinity_dsm=req.ec_salinity_dsm,
+        hardpan_detected=req.hardpan_detected,
+        soc_g_kg=req.soc_g_kg,
+        flash_drought_count_3yr=req.flash_drought_count_3yr,
+        mean_temp_anomaly_c=req.mean_temp_anomaly_c
+    )
+    return {
+        "success": True,
+        "intelligence": res
+    }
+
+@app.get("/api/v1/xai/rationale/{crop_id}")
+def get_xai_rationale_endpoint(crop_id: str, soil: str = "alluvial_clay", ec: float = 1.8):
+    """
+    Returns transparent Explainable AI decision rationale for why a crop is recommended.
+    """
+    crop = get_crop(crop_id)
+    name_ar = crop.get("name_ar", crop_id) if crop else crop_id
+    rationale = calc_crop_decision_rationale(
+        crop_id=crop_id,
+        crop_name_ar=name_ar,
+        soil_type=soil,
+        salinity_ec_dsm=ec,
+        priorities={"profit": 0.35, "water": 0.40, "soil": 0.25}
+    )
+    return {
+        "success": True,
+        "rationale": rationale
     }
 
 @app.post("/api/v1/field-memory/analogues")

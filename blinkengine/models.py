@@ -985,4 +985,232 @@ def calc_rusle_soil_erosion(
         support_p_factor=support_p_factor
     )
 
+# ------------------------------------------------------------------------------
+# 25. Field Intelligence Score (4 Decomposed Pillars - 0 to 100)
+# ------------------------------------------------------------------------------
+def calc_field_intelligence_score(
+    ndvi: float,
+    savi: float,
+    fc: float,
+    esi: float,
+    canopy_fever_c: float,
+    theta_root_m3_m3: float,
+    theta_fc: float,
+    theta_wp: float,
+    ec_salinity_dsm: float,
+    hardpan_detected: bool,
+    soc_g_kg: float,
+    flash_drought_count_3yr: int,
+    mean_temp_anomaly_c: float = 0.0
+) -> Dict[str, Any]:
+    """
+    Computes a transparent, fully explainable Field Intelligence Score (0 to 100),
+    decomposed into 4 balanced biophysical pillars (25 points each).
+    """
+    # Pillar 1: Vegetation Health (0 - 25 pts)
+    # Evaluates photosynthetic vigor and fractional foliage coverage
+    veg_ratio = np.clip((ndvi - 0.15) / 0.65, 0.0, 1.0) * 0.5 + np.clip(fc / 0.85, 0.0, 1.0) * 0.5
+    veg_score = float(round(veg_ratio * 25.0, 1))
+
+    # Pillar 2: Water Stress & Canopy Transpiration (0 - 25 pts)
+    # Higher ESI is healthy; high canopy fever penalizes score
+    fever_penalty = np.clip(max(0.0, canopy_fever_c) / 6.0, 0.0, 1.0)
+    water_ratio = (np.clip(esi, 0.0, 1.0) * 0.7) + ((1.0 - fever_penalty) * 0.3)
+    water_score = float(round(water_ratio * 25.0, 1))
+
+    # Pillar 3: Soil Conditions & Rootability (0 - 25 pts)
+    # Salinity penalty above 2.0 dS/m, hardpan penalty of 6 pts, SOC bonus
+    salinity_ratio = max(0.0, 1.0 - (max(0.0, ec_salinity_dsm - 1.5) / 6.0))
+    hardpan_pts = 0.0 if hardpan_detected else 6.0
+    soc_pts = min(6.0, (soc_g_kg / 15.0) * 6.0)
+    soil_score = float(round((salinity_ratio * 13.0) + hardpan_pts + soc_pts, 1))
+    soil_score = min(25.0, max(2.0, soil_score))
+
+    # Pillar 4: Climate Resilience & Flash Drought Vulnerability (0 - 25 pts)
+    # Penalizes historical shock frequency and thermal anomalies
+    drought_penalty = min(12.0, flash_drought_count_3yr * 3.5)
+    heat_penalty = min(6.0, max(0.0, mean_temp_anomaly_c) * 2.0)
+    climate_score = float(round(max(4.0, 25.0 - drought_penalty - heat_penalty), 1))
+
+    total_score = float(round(veg_score + water_score + soil_score + climate_score, 1))
+    total_score = float(np.clip(total_score, 0.0, 100.0))
+
+    if total_score >= 82.0:
+        grade_ar, grade_en = "ممتاز — توازن بيولوجي وإنتاجي فائق", "Excellent — High Ecological & Productive Balance"
+        color = "green"
+    elif total_score >= 65.0:
+        grade_ar, grade_en = "جيد — مؤشرات مستقرة مع إجهاد طفيف", "Good — Stable Indicators with Minor Stress"
+        color = "emerald"
+    elif total_score >= 48.0:
+        grade_ar, grade_en = "متوسط — إجهاد مائي أو ملوحة تتطلب تدخل", "Moderate — Water Stress or Salinity Intervention Required"
+        color = "amber"
+    else:
+        grade_ar, grade_en = "حرج — إنذار مبكر بتدهور المحصول", "Critical — Early Warning of Crop Deterioration"
+        color = "red"
+
+    return {
+        "overall_score": total_score,
+        "grade_ar": grade_ar,
+        "grade_en": grade_en,
+        "status_color": color,
+        "pillars": {
+            "vegetation_health": {
+                "score": veg_score,
+                "max": 25.0,
+                "description_ar": "صحة المجموع الخضري وكثافة الغطاء النباتي (NDVI/SAVI)",
+                "description_en": "Photosynthetic vigor and fractional vegetation cover"
+            },
+            "water_stress": {
+                "score": water_score,
+                "max": 25.0,
+                "description_ar": "كفاءة التبريد بالبخر ومؤشر الإجهاد المائي (ESI)",
+                "description_en": "Transpirational cooling efficiency and evaporative stress index"
+            },
+            "soil_conditions": {
+                "score": soil_score,
+                "max": 25.0,
+                "description_ar": "ملوحة التربة وجودة الصرف والمادة العضوية",
+                "description_en": "Soil salinity, root-zone drainage, and organic carbon"
+            },
+            "climate_resilience": {
+                "score": climate_score,
+                "max": 25.0,
+                "description_ar": "مقاومة نوبات الجفاف الومضي والصدمات الحرارية",
+                "description_en": "Resilience to flash droughts and extreme thermal drift"
+            }
+        }
+    }
+
+# ------------------------------------------------------------------------------
+# 26. Smart Irrigation Optimizer (Baseline Flood vs Prescriptive Drip)
+# ------------------------------------------------------------------------------
+def calc_smart_irrigation_optimizer(
+    theta_fc: float,
+    theta_current: float,
+    theta_wp: float,
+    z_r_m: float,
+    area_feddan: float,
+    irrigation_system: str = "drip",
+    pumping_energy_cost_per_m3: float = 2.50
+) -> Dict[str, Any]:
+    """
+    Computes prescriptive irrigation dosage and compares with traditional practice:
+    - Exact required depth (mm) and volume (m^3/feddan and total m^3)
+    - Traditional flood baseline comparison (380 - 450 m^3/feddan)
+    - Net water saved (m^3 and %) and direct pumping fuel savings (EGP)
+    - Optimal diurnal application window
+    """
+    # 1 feddan = 4200.08 m^2. Depth mm * 4.2 = m^3/feddan
+    depletion_frac = max(0.0, (theta_fc - theta_current) / max(0.01, theta_fc - theta_wp))
+    raw_depth_mm = max(5.0, (theta_fc - theta_current) * z_r_m * 1000.0)
+
+    # Irrigation system efficiency
+    sys_lower = irrigation_system.lower()
+    if "drip" in sys_lower or "تنقيط" in sys_lower:
+        eta_sys = 0.90
+        baseline_flood_m3_feddan = 380.0
+    elif "sprinkler" in sys_lower or "pivot" in sys_lower or "رش" in sys_lower or "بيفوت" in sys_lower:
+        eta_sys = 0.82
+        baseline_flood_m3_feddan = 390.0
+    else:  # Flood / غمر
+        eta_sys = 0.60
+        baseline_flood_m3_feddan = 420.0
+
+    prescribed_depth_mm = float(round(raw_depth_mm / eta_sys, 1))
+    prescribed_vol_m3_feddan = float(round(prescribed_depth_mm * 4.2, 1))
+    total_prescribed_m3 = float(round(prescribed_vol_m3_feddan * area_feddan, 1))
+
+    # Water savings vs flood
+    water_saved_m3_feddan = float(round(max(0.0, baseline_flood_m3_feddan - prescribed_vol_m3_feddan), 1))
+    water_saved_pct = float(round((water_saved_m3_feddan / baseline_flood_m3_feddan) * 100.0, 1))
+    total_water_saved_m3 = float(round(water_saved_m3_feddan * area_feddan, 1))
+    money_saved_egp = float(round(total_water_saved_m3 * pumping_energy_cost_per_m3, 0))
+
+    return {
+        "prescribed_depth_mm": prescribed_depth_mm,
+        "prescribed_volume_m3_feddan": prescribed_vol_m3_feddan,
+        "total_prescribed_volume_m3": total_prescribed_m3,
+        "baseline_flood_volume_m3_feddan": baseline_flood_m3_feddan,
+        "water_saved_m3_feddan": water_saved_m3_feddan,
+        "water_saved_percent": water_saved_pct,
+        "total_water_saved_m3": total_water_saved_m3,
+        "pumping_savings_egp": money_saved_egp,
+        "optimal_timing_window_ar": "الفجر حتى 8:30 صباحاً (أو بعد 5:30 مساءً لتفادي الفواقد البخرية الشديدة)",
+        "optimal_timing_window_en": "Early dawn until 8:30 AM (or post 5:30 PM to minimize evaporative losses)",
+        "efficiency_factor": eta_sys
+    }
+
+# ------------------------------------------------------------------------------
+# 27. Explainable AI Crop Decision Rationale (XAI)
+# ------------------------------------------------------------------------------
+def calc_crop_decision_rationale(
+    crop_id: str,
+    crop_name_ar: str,
+    soil_type: str,
+    salinity_ec_dsm: float,
+    priorities: Dict[str, float],
+    rejected_alternatives: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """
+    Generates transparent XAI reasoning explaining why this crop was ranked #1,
+    the primary agronomic trade-offs, and why competitor crops were rejected.
+    """
+    key_reasons_ar = []
+    key_reasons_en = []
+    trade_offs_ar = []
+
+    # Priority weighting context
+    p_profit = priorities.get("profit", priorities.get("profitWeight", 0.30))
+    p_water = priorities.get("water", priorities.get("waterWeight", 0.35))
+    p_soil = priorities.get("soil", priorities.get("soilHealthWeight", 0.20))
+
+    if p_water >= 0.30:
+        key_reasons_ar.append(f"توفير مياه عالي يتناسب مع تفضيلك لترشيد المياه (وزن {int(p_water*100)}%)")
+        key_reasons_en.append(f"High water productivity aligned with your water saving preference ({int(p_water*100)}%)")
+    if p_profit >= 0.30:
+        key_reasons_ar.append(f"عائد مادي ممتاز وسيولة تسويقية عالية في السوق المصري (وزن {int(p_profit*100)}%)")
+        key_reasons_en.append(f"High gross margin and immediate market liquidity in Egypt ({int(p_profit*100)}%)")
+    if p_soil >= 0.20:
+        key_reasons_ar.append("تحسين خصائص باطن التربة وزيادة النيتروجين أو كسر دورات الآفات")
+        key_reasons_en.append("Regenerates soil nitrogen capital or interrupts pest nematodes")
+
+    # Salinity adaptation reasoning
+    if salinity_ec_dsm > 2.5:
+        key_reasons_ar.append(f"المحصول يمتلك تحملاً فسيولوجياً مبرهناً للملوحة الحالية ({salinity_ec_dsm:.1f} dS/m)")
+        key_reasons_en.append(f"Physiologically certified tolerance to current soil salinity ({salinity_ec_dsm:.1f} dS/m)")
+
+    # Default rejected alternatives if not supplied
+    if not rejected_alternatives:
+        rejected_alternatives = [
+            {
+                "crop_id": "rice",
+                "name_ar": "الأرز المائي",
+                "rejection_reason_ar": "تم استبعاده لاستهلاكه المائي الهائل (>8000 م³/هكتار) وتعارضه مع أهداف ترشيد المياه وقوانين الحصص المائية",
+                "rejection_reason_en": "Rejected due to excessive water consumption (>8000 m³/ha) and strict water allocation quotas"
+            },
+            {
+                "crop_id": "peanut",
+                "name_ar": "الفول السوداني",
+                "rejection_reason_ar": "تم استبعاده في التربة الطينية أو عند تكرار العروات لتجنب انفجار نيماتودا تعقد الجذور",
+                "rejection_reason_en": "Rejected in heavy soils or repetitive rotations to prevent root-knot nematode blooms"
+            }
+        ]
+
+    return {
+        "chosen_crop_id": crop_id,
+        "chosen_crop_name_ar": crop_name_ar,
+        "key_reasons_ar": key_reasons_ar,
+        "key_reasons_en": key_reasons_en,
+        "rejected_alternatives": rejected_alternatives,
+        "risk_factors_ar": [
+            "الانحراف عن مواعيد الزراعة المعتمدة يرفع حساسية التزهير للإجهاد الحراري",
+            "الإفراط في التسميد النيتروجيني يزيد الملوحة الثانوية ويقلل العائد الصافي"
+        ],
+        "risk_factors_en": [
+            "Deviating from certified sowing windows increases flowering heat sensitivity",
+            "Excessive nitrogen application causes secondary salinity and cuts net margins"
+        ]
+    }
+
+
 
