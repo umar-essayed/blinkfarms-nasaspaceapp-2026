@@ -320,11 +320,47 @@ def test_field_memory_and_rotation_simulation():
     print("✓ Field Memory Store & 6-Season Rotation Simulation verified 100%!")
 
 
+def test_security_persistence_and_empirical_benchmarks():
+    """Validates security, disk persistence, and empirical validation separation."""
+    print("\n--- [TEST SUITE 5] Validating P0 & P1 Production Fixes ---")
+
+    from nasa_client import NASA_API_KEY, EARTHDATA_BEARER_TOKEN, verify_nasa_power_connection
+    from historical_validation import run_ameriflux_us_ne1_benchmark, run_synthetic_stress_benchmark
+
+    # 1. No hardcoded private keys
+    assert NASA_API_KEY in ["DEMO_KEY", ""] or not NASA_API_KEY.startswith("CfJT"), "Exposed private NASA API key detected!"
+    assert not EARTHDATA_BEARER_TOKEN.startswith("eyJ0eXAiOiJKV1QiLCJvcmlnaW4iOiJFYXJ0aGRhdGEgTG9naW4iLCJzaWciOiJlZGxqd3RwdWJrZXlfb3Bz"), "Exposed private Earthdata token detected!"
+
+    # 2. Field Memory persistence to disk
+    test_id = "test_persistence_field_01"
+    GLOBAL_FIELD_MEMORY_STORE.register_or_update_field(
+        field_id=test_id,
+        polygon_coords=[(30.0, 31.0), (30.1, 31.0), (30.1, 31.1), (30.0, 31.1)],
+        area_feddan=20.0
+    )
+    assert GLOBAL_FIELD_MEMORY_STORE.get_field(test_id) is not None
+    cache_path = os.path.join(ENGINE_ROOT, "field_memory_cache.json")
+    assert os.path.exists(cache_path), f"Disk cache file {cache_path} was not created!"
+
+    # 3. AmeriFlux Empirical Validation vs Synthetic Separation
+    empirical_res = run_ameriflux_us_ne1_benchmark()
+    assert empirical_res["is_synthetic"] is False
+    assert empirical_res["r_squared"] >= 0.80
+    assert empirical_res["rmse_mm_day"] < 2.2
+
+    synthetic_res = run_synthetic_stress_benchmark()
+    assert synthetic_res["is_synthetic"] is True
+    assert synthetic_res["early_warning_lead_time_days"] == 14
+
+    print("✓ P0 & P1 Security, Persistence, and Empirical Validation verified 100%!")
+
+
 if __name__ == "__main__":
     test_24_biophysical_and_economic_equations()
     test_6_implementation_edge_cases()
     test_master_crop_database_48_crops()
     test_field_memory_and_rotation_simulation()
+    test_security_persistence_and_empirical_benchmarks()
     print("\n" + "=" * 75)
     print("ALL BLINKENGINE TESTS PASSED WITH 100% SUCCESS — READY FOR NASA AUDIT!")
     print("=" * 75)

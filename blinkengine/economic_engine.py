@@ -289,6 +289,12 @@ def calc_single_crop_economics(
         "name_en": profile["nameEn"],
         "producer_price_per_ton_egp": price_egp,
         "producer_price_per_ton_usd": price_usd,
+        "price_metadata": {
+            "source": "Egyptian ARC & Ministry of Agriculture 2026 Procurement Bulletin",
+            "updated_at": "2026-10",
+            "region": "Egypt - National Farm-Gate Baseline",
+            "is_estimate": True
+        },
         "standard_yield_ym_ton_feddan": ym_feddan,
         "actual_yield_ya_ton_feddan": float(round(ya_feddan, 2)),
         "actual_yield_ya_ton_ha": float(round(ya_ha, 2)),

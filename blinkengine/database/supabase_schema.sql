@@ -154,3 +154,29 @@ VALUES
 ('حقل توشكى المستصلح (واحة صحراوية)', 'مشروع تنمية جنوب الوادي', 'Egypt', 22.684, 31.543, 120.0, 'Sandy Loam with Calcareous Hardpan'),
 ('أرض زراعية في المنيا (وادي النيل)', 'حقل عائلي بسمالوط', 'Egypt', 28.312, 30.714, 25.0, 'Alluvial Clay Loam')
 ON CONFLICT DO NOTHING;
+
+-- ------------------------------------------------------------------------------
+-- 9. ROW LEVEL SECURITY (RLS) & ACCESS CONTROL POLICIES
+-- ------------------------------------------------------------------------------
+ALTER TABLE farms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE field_memory_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rotation_simulation_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crop_catalog ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agronomic_knowledge ENABLE ROW LEVEL SECURITY;
+
+-- Public read-only access for reference catalogs
+CREATE POLICY "Allow public read access to crop catalog"
+    ON crop_catalog FOR SELECT USING (true);
+
+CREATE POLICY "Allow public read access to agronomic knowledge"
+    ON agronomic_knowledge FOR SELECT USING (true);
+
+-- Authenticated / Service role access for farm records
+CREATE POLICY "Allow authenticated read and insert on farms"
+    ON farms FOR ALL USING (auth.role() = 'authenticated' OR auth.role() = 'service_role');
+
+CREATE POLICY "Allow authenticated read and insert on field memory"
+    ON field_memory_states FOR ALL USING (auth.role() = 'authenticated' OR auth.role() = 'service_role');
+
+CREATE POLICY "Allow authenticated read and insert on rotation plans"
+    ON rotation_simulation_plans FOR ALL USING (auth.role() = 'authenticated' OR auth.role() = 'service_role');

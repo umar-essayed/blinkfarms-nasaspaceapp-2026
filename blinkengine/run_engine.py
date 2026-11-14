@@ -14,15 +14,20 @@ if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
 def main():
+    env = os.environ.get("ENV", "development").lower()
+    is_production = env in ["production", "prod"]
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 8000))
+
     print("=" * 75)
     print("  BlinkEngine — NASA Earth Observation Biophysical & Economic Microservice")
     print("  NASA Space Apps Challenge 2026 | Field Shift: Adapting Farms with NASA Data")
     print("=" * 75)
-    print("  Host: 0.0.0.0 | Port: 8000 | Reload: Enabled")
-    print("  Swagger UI: http://127.0.0.1:8000/docs")
-    print("  Health:     http://127.0.0.1:8000/health")
+    print(f"  Environment: {env.upper()} | Host: {host} | Port: {port} | Reload: {not is_production}")
+    print(f"  Swagger UI:  http://127.0.0.1:{port}/docs")
+    print(f"  Health:      http://127.0.0.1:{port}/api/v1/health")
     print("=" * 75)
-    uvicorn.run("api_server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("api_server:app", host=host, port=port, reload=not is_production)
 
 if __name__ == "__main__":
     main()

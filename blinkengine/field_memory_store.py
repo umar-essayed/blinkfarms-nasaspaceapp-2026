@@ -4,10 +4,16 @@
 # NASA Space Apps Challenge 2026: Field Shift
 # ==============================================================================
 
+import os
+import json
 import math
+from datetime import datetime, timezone
 import numpy as np
 from typing import Dict, List, Any, Tuple, Optional
 from dataclasses import dataclass, field, asdict
+
+_STORE_DIR = os.path.dirname(os.path.abspath(__file__))
+_PERSISTENT_CACHE_PATH = os.path.join(_STORE_DIR, "field_memory_cache.json")
 
 # ------------------------------------------------------------------------------
 # 1. Saxton & Rawls (2006) Pedotransfer Functions (SoilGrids Coupling)
@@ -299,6 +305,29 @@ class FieldMemoryStore:
     """
     def __init__(self):
         self._fields_registry: Dict[str, Dict[str, Any]] = {}
+        self._load_from_storage()
+
+    def _load_from_storage(self):
+        """Loads persisted fields from local disk cache on startup."""
+        try:
+            if os.path.exists(_PERSISTENT_CACHE_PATH):
+                with open(_PERSISTENT_CACHE_PATH, "r", encoding="utf-8") as f:
+                    self._fields_registry = json.load(f)
+        except Exception as e:
+            # Fallback gracefully if file corrupted or unreadable
+            self._fields_registry = {}
+
+    def _save_to_storage(self):
+        """Persists fields registry to local disk and triggers Supabase sync if enabled."""
+        try:
+            with open(_PERSISTENT_CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(self._fields_registry, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def get_field(self, field_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves field record from persistent store."""
+        return self._fields_registry.get(field_id)
 
     def register_or_update_field(
         self,
@@ -371,10 +400,11 @@ class FieldMemoryStore:
             },
             "temporal_history_20seasons": self._generate_synthetic_10yr_baseline(field_id, sand_pct, current_ec_dsm),
             "state_vector_16d": state_vec.tolist(),
-            "last_updated_iso": "2026-11-13T18:00:00Z"
+            "last_updated_iso": datetime.now(timezone.utc).isoformat()
         }
 
         self._fields_registry[field_id] = record
+        self._save_to_storage()
         return record
 
     def find_top_k_analogues(

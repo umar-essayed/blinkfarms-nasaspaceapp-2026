@@ -22,7 +22,10 @@ __pycache__/
 *.so
 .env
 .env*
+!.env.example
 .venv
 env/
 venv/
 .pytest_cache/
+field_memory_cache.json
+*.cache.json

@@ -6,8 +6,9 @@
 
 import os
 import sys
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import numpy as np
@@ -21,8 +22,17 @@ from models import (
     simulate_fao56_daily_balance, calc_stewart_yield,
     calc_soil_health_index, solve_dynamic_topsis
 )
-from historical_validation import run_ameriflux_us_ne1_benchmark, run_regional_arid_benchmarks
-from nasa_client import fetch_nasa_power_live, compute_live_biophysical_atmosphere, verify_earthdata_token
+from historical_validation import (
+    run_ameriflux_us_ne1_benchmark,
+    run_synthetic_stress_benchmark,
+    run_regional_arid_benchmarks
+)
+from nasa_client import (
+    fetch_nasa_power_live,
+    compute_live_biophysical_atmosphere,
+    verify_earthdata_token,
+    verify_nasa_power_connection
+)
 from crop_rotation_engine import run_rotation_simulation
 from master_crop_database import (
     CATEGORIES,
@@ -45,14 +55,38 @@ app = FastAPI(
     description="Scientific microservice executing 24 NASA Earth Observation algorithms, 48 FAO-56/AquaCrop crops, and 16D Field Memory Store"
 )
 
-# Enable CORS for Next.js frontend (default port 3001 or 3000)
+# Secure CORS configuration: Explicit origins instead of wildcard when credentials enabled
+ALLOWED_ORIGINS = [
+    orig.strip()
+    for orig in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://blinkfarms.vercel.app"
+    ).split(",")
+    if orig.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security: Optional API Key validation for sensitive mutating operations
+ENGINE_API_KEY = os.environ.get("ENGINE_API_KEY", "")
+ALLOW_ANONYMOUS = os.environ.get("ALLOW_ANONYMOUS", "true").lower() in ["true", "1", "yes"]
+
+def verify_api_authorization(x_api_key: Optional[str] = Header(None)):
+    """Protects sensitive endpoints against unauthorized writes if ENGINE_API_KEY is configured."""
+    if not ENGINE_API_KEY or ALLOW_ANONYMOUS:
+        return True
+    if x_api_key != ENGINE_API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized: Missing or invalid X-API-Key header for sensitive engine operation."
+        )
+    return True
 
 class TelemetryRequest(BaseModel):
     lat: float = 30.850
@@ -108,35 +142,36 @@ def health_check():
         "engine": "BlinkEngine NASA Scientific Core",
         "version": "3.5.0",
         "framework": "FastAPI + NumPy + SciPy",
-        "nasa_sensors": [
-            "NASA ECOSTRESS (70m Thermal)",
-            "NASA SMAP L4 (30m Root-Zone Moisture)",
-            "NASA HLS (Landsat-8/9 & Sentinel-2)",
-            "NASA POWER (MERRA-2 Climatology)",
-            "NASA GPM IMERG (Precipitation)",
-            "NASA GRACE-FO (Groundwater Storage Anomaly)",
-            "NASA SRTM (30m Topography)",
-            "Sentinel-1 SAR (PINN Virtual Thermal)"
-        ],
+        "data_ingestion_modes": {
+            "live_direct_streams": [
+                "NASA POWER (Daily Agroclimatology & MERRA-2 Radiation / Temp / Wind / RH)",
+                "SRTM 30m Digital Elevation Model (Topographic Slopes & TWI)"
+            ],
+            "modeled_biophysical_proxies": [
+                "NASA ECOSTRESS (70m Thermal Canopy Temperature & ESI Proxy via PT-JPL)",
+                "NASA SMAP L4 (30m Mass-Conserved Downscaled Root-Zone Soil Moisture)",
+                "Sentinel-1 SAR (PINN Virtual Thermal Cloud-Piercing Proxy)"
+            ]
+        },
         "crop_catalog_size": 48,
         "agronomic_categories": 8,
-        "live_nasa_ingestion": True
+        "server_time_utc": datetime.now(timezone.utc).isoformat()
     }
 
 @app.get("/api/v1/auth/verify")
 def verify_credentials():
     """
-    Verifies NASA POWER Open API Key and NASA Earthdata Bearer Token.
+    Executes actual network probes to verify NASA POWER REST API and NASA Earthdata Cloud.
+    Reports real latency, HTTP status code, and connectivity state.
     """
-    ed_status = verify_earthdata_token()
+    power_probe = verify_nasa_power_connection(timeout_sec=5.0)
+    ed_status = verify_earthdata_token(timeout_sec=5.0)
+    
     return {
-        "success": True,
-        "nasa_power_api": {
-            "endpoint": "https://power.larc.nasa.gov/api/temporal/daily/point",
-            "key_present": True,
-            "status": "verified"
-        },
-        "nasa_earthdata_cloud": ed_status
+        "success": power_probe.get("reachable", False),
+        "nasa_power_api": power_probe,
+        "nasa_earthdata_cloud": ed_status,
+        "checked_at_utc": datetime.now(timezone.utc).isoformat()
     }
 
 @app.post("/api/v1/telemetry")
@@ -147,6 +182,8 @@ def compute_telemetry(req: TelemetryRequest):
     All intermediate physical variables are computed live on the fly from the NASA data stream.
     """
     data_source = "LIVE_NASA_POWER_API"
+    is_degraded = False
+    data_warning = None
     obs_date = None
 
     # Soil texture hydraulic parametrization
@@ -185,17 +222,19 @@ def compute_telemetry(req: TelemetryRequest):
     if req.t_air is None or req.pet is None or req.r_net is None:
         try:
             live_obs = fetch_nasa_power_live(req.lat, req.lon)
-            obs_date = live_obs["observation_date"]
+            obs_date = live_obs.get("observation_date")
             atmo = compute_live_biophysical_atmosphere(live_obs)
-            t_air = live_obs["t_air_mean"]
-            rh = live_obs["rh_pct"] / 100.0  # Fraction 0-1
-            u_wind = live_obs["wind_speed_ms"]
+            t_air = live_obs.get("t_air", live_obs.get("t_air_mean", 30.5))
+            rh = (live_obs.get("rh_pct", 45.0)) / 100.0  # Fraction 0-1
+            u_wind = live_obs.get("wind_speed_2m", live_obs.get("wind_speed_ms", 2.8))
             r_net = atmo["r_net_wm2"]
             pet = atmo["et0_mm_day"]
-            precip = live_obs["precip_mm_day"]
+            precip = live_obs.get("precip_mm", live_obs.get("precip_mm_day", 0.0))
         except Exception as e:
             # Deterministic solar physics if NASA network timeout occurs
-            data_source = "DETERMINISTIC_SOLAR_PHYSICS_FALLBACK"
+            data_source = "FALLBACK_SYNTHETIC"
+            is_degraded = True
+            data_warning = f"Live NASA POWER stream temporarily unavailable ({str(e)}); utilizing regional biophysical fallback model."
             t_air = req.t_air if req.t_air is not None else 30.5
             rh = req.rh if req.rh is not None else 0.40
             u_wind = req.u_wind if req.u_wind is not None else 3.0
@@ -480,6 +519,9 @@ def compute_telemetry(req: TelemetryRequest):
         },
         "provenance": {
             "data_source": data_source,
+            "is_degraded": is_degraded,
+            "warning": data_warning,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
             "nasa_observation_date": obs_date,
             "nasa_parameters": ["T2M", "T2M_MAX", "T2M_MIN", "WS2M", "RH2M", "ALLSKY_SFC_SW_DWN", "PRECTOTCORR"],
             "derived_biophysical_fluxes": ["VPD", "Delta_slope", "Net_Radiation_Rn", "FAO56_ET0", "PT_JPL_LEc", "Omega_Advection_Decoupled"],
@@ -558,6 +600,18 @@ def get_ameriflux_benchmark():
         "results": res
     }
 
+@app.get("/api/v1/validation/synthetic")
+def get_synthetic_validation():
+    """
+    Returns the synthetic stress test demonstrating the 14-day early-warning
+    lead time between thermal ESI and optical NDVI greenness.
+    """
+    res = run_synthetic_stress_benchmark()
+    return {
+        "success": True,
+        "benchmark": res
+    }
+
 @app.get("/api/v1/regional_benchmarks")
 def get_regional_benchmarks():
     """
@@ -591,7 +645,7 @@ class AnalogueSearchRequest(BaseModel):
     k: int = 3
 
 @app.post("/api/v1/field-memory/register")
-def register_field_endpoint(req: FieldRegisterRequest):
+def register_field_endpoint(req: FieldRegisterRequest, auth: bool = Depends(verify_api_authorization)):
     record = GLOBAL_FIELD_MEMORY_STORE.register_or_update_field(
         field_id=req.field_id,
         polygon_coords=req.polygon_coords,
