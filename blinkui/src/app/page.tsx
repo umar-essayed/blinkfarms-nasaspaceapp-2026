@@ -76,14 +76,31 @@ export default function BlinkFarmsApp() {
   }, [selectedPresetId]);
 
   const activePolygonBoundary = useMemo(() => {
+    if (selectedPresetId !== 'custom') {
+      return activePreset?.polygonBoundary;
+    }
     if (customPolygon && customPolygon.length >= 3) {
       return customPolygon;
     }
-    if (selectedPresetId === 'custom') {
-      return undefined;
+    return undefined;
+  }, [selectedPresetId, activePreset, customPolygon]);
+
+  const displayFieldName = useMemo(() => {
+    if (selectedPresetId !== 'custom' && activePreset) {
+      return lang === 'ar' ? activePreset.nameAr : activePreset.nameEn;
     }
-    return activePreset?.polygonBoundary;
-  }, [customPolygon, selectedPresetId, activePreset]);
+    if (selectedPresetId === 'custom') {
+      if (currentFieldName.includes('قطعة محددة') || currentFieldName.includes('Custom Parcel')) {
+        return lang === 'ar' ? `قطعة محددة (${currentAreaFeddan} فدان)` : `Custom Parcel (${currentAreaFeddan} fed)`;
+      }
+      if (currentFieldName.startsWith('حقل (') || currentFieldName.startsWith('Field (')) {
+        return lang === 'ar'
+          ? `حقل (${currentLat.toFixed(2)}°, ${currentLon.toFixed(2)}°)`
+          : `Field (${currentLat.toFixed(2)}°, ${currentLon.toFixed(2)}°)`;
+      }
+    }
+    return currentFieldName;
+  }, [selectedPresetId, activePreset, lang, currentFieldName, currentAreaFeddan, currentLat, currentLon]);
 
   // Agronomic Rotation Wizard State
   const [isWizardCompleted, setIsWizardCompleted] = useState<boolean>(false);
@@ -341,6 +358,16 @@ export default function BlinkFarmsApp() {
     localStorage.setItem('blinkfarms_lang', nextLang);
     document.documentElement.lang = nextLang;
     document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+
+    if (selectedPresetId !== 'custom' && activePreset) {
+      setCurrentFieldName(nextLang === 'ar' ? activePreset.nameAr : activePreset.nameEn);
+    } else if (selectedPresetId === 'custom') {
+      if (currentFieldName.includes('قطعة محددة') || currentFieldName.includes('Custom Parcel')) {
+        setCurrentFieldName(nextLang === 'ar' ? `قطعة محددة (${currentAreaFeddan} فدان)` : `Custom Parcel (${currentAreaFeddan} fed)`);
+      } else if (currentFieldName.startsWith('حقل (') || currentFieldName.startsWith('Field (')) {
+        setCurrentFieldName(nextLang === 'ar' ? `حقل (${currentLat.toFixed(2)}°, ${currentLon.toFixed(2)}°)` : `Field (${currentLat.toFixed(2)}°, ${currentLon.toFixed(2)}°)`);
+      }
+    }
   };
 
   // Handle Preset Selection
@@ -349,6 +376,7 @@ export default function BlinkFarmsApp() {
     setCustomPolygon(null);
     setLiveTelemetry(null);
     localStorage.setItem('blinkfarms_selected_preset', preset.id);
+    localStorage.removeItem('blinkfarms_custom_polygon');
     setCurrentLat(preset.coordinates[0]);
     setCurrentLon(preset.coordinates[1]);
     setCurrentFieldName(lang === 'ar' ? preset.nameAr : preset.nameEn);
@@ -475,7 +503,7 @@ export default function BlinkFarmsApp() {
         user={currentUser}
         lang={lang}
         farmAcreage={currentAreaFeddan}
-        fieldName={currentFieldName}
+        fieldName={displayFieldName}
         onLogout={() => {
           localStorage.removeItem('blinkfarms_auth_user');
           setCurrentUser(null);
@@ -487,7 +515,7 @@ export default function BlinkFarmsApp() {
 
       {/* Ultra-Fluid Organic Top Bar: Logo + Field Picker + Nav + Profile */}
       <header className="sticky top-0 z-40 bg-[#F8F5EE]/85 backdrop-blur-2xl border-b border-[#384536]/10 w-full transition-all">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
+        <div className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
           {/* Brand + Field Picker */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
@@ -505,7 +533,7 @@ export default function BlinkFarmsApp() {
             </button>
 
             {/* Field Dropdown / Switcher */}
-            <div className="flex items-center bg-[#EDE6D9] p-1 rounded-2xl min-w-0 max-w-[170px] sm:max-w-[240px] border border-[#384536]/10 shadow-sm">
+            <div className="flex items-center bg-[#EDE6D9] p-1 rounded-2xl min-w-0 max-w-[170px] sm:max-w-[260px] lg:max-w-[340px] border border-[#384536]/10 shadow-sm">
               <select
                 value={selectedPresetId}
                 onChange={(e) => {
@@ -520,7 +548,7 @@ export default function BlinkFarmsApp() {
               >
                 {selectedPresetId === 'custom' && (
                   <option value="custom" className="bg-[#FAF7F2] font-bold text-[#2F6E3E]">
-                    📍 {currentFieldName}
+                    📍 {displayFieldName}
                   </option>
                 )}
                 {DEMO_FIELDS.map(f => (
@@ -603,18 +631,18 @@ export default function BlinkFarmsApp() {
       </header>
 
       {/* Main Flow Content (Edge-to-Edge Fluid Background) */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-12 w-full min-w-0">
+      <main className="max-w-7xl xl:max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 lg:pt-8 pb-16 w-full min-w-0">
         {/* =========================================================================
             TAB 1: HOME / FIELD RADAR
            ========================================================================= */}
         {activeTab === 'radar' && (
-          <div className="space-y-6 sm:space-y-8 animate-fadeIn">
+          <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-7 animate-fadeIn items-start">
             {/* 1. CRYSTAL-CLEAR SATELLITE MAP */}
-            <div className="w-full">
+            <div className="w-full min-w-0 lg:col-span-7 xl:col-span-7">
               <SplitFieldMap
                 lat={currentLat}
                 lon={currentLon}
-                fieldName={currentFieldName}
+                fieldName={displayFieldName}
                 lang={lang}
                 onLocationChange={handleLocationChange}
                 onCustomPolygonChange={handleCustomPolygonChange}
@@ -624,16 +652,18 @@ export default function BlinkFarmsApp() {
               />
             </div>
 
-            {/* Daily Field Operations Center (Spacious & Clean) */}
-            <FarmerMorningVitals
-              telemetry={telemetry}
-              vitals={unifiedVitals}
-              areaFeddan={currentAreaFeddan}
-              lang={lang}
-              onOpenScienceModal={(tab, eqId, targetMetric) =>
-                setScienceModalConfig({ isOpen: true, tab: tab || 'diagnostic', eqId, targetMetric: targetMetric || 'health' })
-              }
-            />
+            {/* Daily Field Operations Center (Spacious & Clean Beside Map on Desktop) */}
+            <div className="w-full min-w-0 lg:col-span-5 xl:col-span-5">
+              <FarmerMorningVitals
+                telemetry={telemetry}
+                vitals={unifiedVitals}
+                areaFeddan={currentAreaFeddan}
+                lang={lang}
+                onOpenScienceModal={(tab, eqId, targetMetric) =>
+                  setScienceModalConfig({ isOpen: true, tab: tab || 'diagnostic', eqId, targetMetric: targetMetric || 'health' })
+                }
+              />
+            </div>
           </div>
         )}
 
@@ -650,7 +680,7 @@ export default function BlinkFarmsApp() {
                 initialAnswers={wizardAnswers}
                 lat={currentLat}
                 lon={currentLon}
-                fieldName={currentFieldName}
+                fieldName={displayFieldName}
                 polygonBoundary={activePolygonBoundary}
               />
             ) : (
@@ -661,7 +691,7 @@ export default function BlinkFarmsApp() {
                   selectedStrategyId={selectedStrategyId}
                   onSelectStrategy={setSelectedStrategyId}
                   areaFeddan={currentAreaFeddan}
-                  fieldName={currentFieldName}
+                  fieldName={displayFieldName}
                   lang={lang}
                   onOpenWizard={() => {
                     setIsWizardCompleted(false);

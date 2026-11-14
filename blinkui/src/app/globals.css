@@ -22,6 +22,10 @@
   color-scheme: light;
 }
 
+html {
+  font-size: 16px;
+}
+
 html, body {
   background-color: var(--cream-bg);
   color: var(--text-primary);

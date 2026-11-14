@@ -117,7 +117,7 @@ export default function OnboardingStory({ lang, onFinish }: OnboardingStoryProps
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#384536]/40 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Progress Bars */}
-      <div className="flex items-center justify-between gap-3 max-w-md mx-auto w-full pt-1 shrink-0 relative z-10">
+      <div className="flex items-center justify-between gap-3 max-w-md lg:max-w-xl mx-auto w-full pt-1 shrink-0 relative z-10">
         <div className="flex items-center gap-1.5 flex-1">
           {slides.map((_, i) => (
             <div
@@ -142,7 +142,7 @@ export default function OnboardingStory({ lang, onFinish }: OnboardingStoryProps
       </div>
 
       {/* Main Slide Content (Compact One-Screen layout) */}
-      <div className="max-w-md mx-auto w-full my-auto space-y-3 sm:space-y-4 text-center py-2 shrink-0 relative z-10">
+      <div className="max-w-md lg:max-w-xl mx-auto w-full my-auto space-y-3 sm:space-y-4 lg:space-y-6 text-center py-2 shrink-0 relative z-10">
         <div className="flex items-center justify-center gap-2">
           <img
             src="/logo.png"
@@ -199,7 +199,7 @@ export default function OnboardingStory({ lang, onFinish }: OnboardingStoryProps
       </div>
 
       {/* Bottom Button Bar */}
-      <div className="max-w-md mx-auto w-full flex items-center justify-between gap-3 pb-2 shrink-0 relative z-10">
+      <div className="max-w-md lg:max-w-xl mx-auto w-full flex items-center justify-between gap-3 pb-2 shrink-0 relative z-10">
         {slide > 0 ? (
           <button
             onClick={() => setSlide(slide - 1)}

@@ -209,7 +209,7 @@ export default function MarkdownMessage({ content }: MarkdownMessageProps) {
   const segments = content.split(widgetRegex);
 
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none text-inherit leading-relaxed font-sans">
+    <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none text-inherit leading-relaxed font-sans">
       {segments.map((seg, idx) => {
         if (seg.startsWith('[WIDGET:') && seg.endsWith(']')) {
           return renderInlineWidget(seg);
@@ -220,32 +220,32 @@ export default function MarkdownMessage({ content }: MarkdownMessageProps) {
             key={idx}
             remarkPlugins={[remarkGfm]}
             components={{
-              p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed text-inherit">{children}</p>,
+              p: ({ children }) => <p className="mb-2.5 last:mb-0 leading-relaxed text-inherit text-xs sm:text-sm lg:text-[16px]">{children}</p>,
               strong: ({ children }) => <strong className="font-black text-inherit">{children}</strong>,
-              ul: ({ children }) => <ul className="list-disc pr-4 pl-4 mb-2 space-y-1">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal pr-4 pl-4 mb-2 space-y-1">{children}</ol>,
+              ul: ({ children }) => <ul className="list-disc pr-4 pl-4 mb-2.5 space-y-1 text-xs sm:text-sm lg:text-[16px]">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal pr-4 pl-4 mb-2.5 space-y-1 text-xs sm:text-sm lg:text-[16px]">{children}</ol>,
               li: ({ children }) => <li className="text-inherit leading-normal">{children}</li>,
-              h3: ({ children }) => <h3 className="text-sm font-black text-inherit mt-3 mb-1.5 flex items-center gap-1.5">{children}</h3>,
-              h4: ({ children }) => <h4 className="text-xs font-bold text-[#384536] mt-2 mb-1">{children}</h4>,
+              h3: ({ children }) => <h3 className="text-sm sm:text-base lg:text-lg font-black text-inherit mt-3 mb-1.5 flex items-center gap-1.5">{children}</h3>,
+              h4: ({ children }) => <h4 className="text-xs sm:text-sm lg:text-base font-bold text-[#384536] mt-2 mb-1">{children}</h4>,
               blockquote: ({ children }) => (
-                <blockquote className="border-r-2 rtl:border-r-2 rtl:border-l-0 ltr:border-l-2 ltr:border-r-0 border-[#384536] px-3 py-1.5 my-2 italic bg-[#EDE6D9]/50 rounded-xl text-inherit">
+                <blockquote className="border-r-2 rtl:border-r-2 rtl:border-l-0 ltr:border-l-2 ltr:border-r-0 border-[#384536] px-3 py-1.5 my-2 italic bg-[#EDE6D9]/50 rounded-xl text-inherit text-xs sm:text-sm lg:text-[15px]">
                   {children}
                 </blockquote>
               ),
               code: ({ children }) => (
-                <code className="px-1.5 py-0.5 text-xs font-mono rounded bg-[#EDE6D9] text-[#384536]">
+                <code className="px-1.5 py-0.5 text-xs lg:text-sm font-mono rounded bg-[#EDE6D9] text-[#384536]">
                   {children}
                 </code>
               ),
               table: ({ children }) => (
                 <div className="my-3 overflow-x-auto rounded-2xl border border-[#384536]/15 bg-[#FAF7F2] shadow-sm not-prose">
-                  <table className="w-full text-right rtl:text-right ltr:text-left text-xs border-collapse font-sans">
+                  <table className="w-full text-right rtl:text-right ltr:text-left text-xs lg:text-sm border-collapse font-sans">
                     {children}
                   </table>
                 </div>
               ),
               thead: ({ children }) => (
-                <thead className="bg-[#EDE6D9] border-b border-[#384536]/15 text-[#243023] font-extrabold text-[11px] uppercase tracking-wider">
+                <thead className="bg-[#EDE6D9] border-b border-[#384536]/15 text-[#243023] font-extrabold text-[11px] lg:text-xs uppercase tracking-wider">
                   {children}
                 </thead>
               ),
@@ -260,12 +260,12 @@ export default function MarkdownMessage({ content }: MarkdownMessageProps) {
                 </tr>
               ),
               th: ({ children }) => (
-                <th className="px-3.5 py-2.5 font-black text-[#243023] whitespace-nowrap">
+                <th className="px-3.5 py-2.5 lg:px-4 lg:py-3 font-black text-[#243023] whitespace-nowrap text-xs lg:text-sm">
                   {children}
                 </th>
               ),
               td: ({ children }) => (
-                <td className="px-3.5 py-2.5 whitespace-nowrap text-[#576855]">
+                <td className="px-3.5 py-2.5 lg:px-4 lg:py-3 whitespace-nowrap text-[#576855] text-xs lg:text-sm">
                   {children}
                 </td>
               ),

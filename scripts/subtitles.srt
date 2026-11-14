@@ -1,0 +1,19 @@
+1
+00:00:00,000 --> 00:00:05,200
+Meet BlinkFarms: adapting agriculture with NASA data for the Field Shift challenge.
+
+2
+00:00:05,200 --> 00:00:11,500
+We fuse NASA SMAP, HLS, and ECOSTRESS at 30-meter precision, predicting flash drought 14 days early.
+
+3
+00:00:11,500 --> 00:00:18,200
+Our AI rotation planner screens thousands of crop cycles in milliseconds with multi-objective TOPSIS.
+
+4
+00:00:18,200 --> 00:00:24,800
+While Blink AI agronomist executes live space tools to optimize farmer decisions.
+
+5
+00:00:24,800 --> 00:00:28,600
+Saving 40% water and increasing farmer profits by 41%. BlinkFarms: Cairo 2026.

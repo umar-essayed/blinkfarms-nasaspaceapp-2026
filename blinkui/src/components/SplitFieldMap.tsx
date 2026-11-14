@@ -200,17 +200,17 @@ export default function SplitFieldMap({
       subs.forEach((sp) => {
         if (sp.boundary && sp.boundary.length >= 3) {
           const subPoly = L.polygon(sp.boundary, {
-            color: sp.type === 'pivot' ? '#38BDF8' : '#2F6E3E',
-            weight: 2,
+            color: sp.type === 'pivot' ? '#38BDF8' : '#22C55E',
+            weight: 2.5,
             dashArray: '4, 4',
-            fillOpacity: 0.18,
-            fillColor: sp.type === 'pivot' ? '#0284C7' : '#2F6E3E',
+            fillOpacity: 0.22,
+            fillColor: sp.type === 'pivot' ? '#0284C7' : '#16A34A',
           }).addTo(parcelLayerGroupRef.current);
 
           subPoly.bindTooltip(
             `<div style="font-family:Cairo,sans-serif; font-size:11px; font-weight:bold; padding:2px 4px; text-align:center;">
               <div>${lang === 'ar' ? sp.nameAr : sp.nameEn}</div>
-              <div style="color:#2F6E3E; font-size:10px;">${lang === 'ar' ? sp.cropAr : sp.cropEn} (${sp.areaFeddan} فدان)</div>
+              <div style="color:#2F6E3E; font-size:10px;">${lang === 'ar' ? sp.cropAr : sp.cropEn} (${sp.areaFeddan} ${lang === 'ar' ? 'فدان' : 'fed'})</div>
             </div>`,
             { sticky: true, className: 'leaflet-apple-tooltip' }
           );
@@ -221,14 +221,14 @@ export default function SplitFieldMap({
     // Outer boundary polygon
     if (boundary && boundary.length >= 3) {
       const poly = L.polygon(boundary, {
-        color: shock ? '#A8382B' : '#384536',
-        weight: 3.0,
-        fillOpacity: shock ? 0.32 : 0.2,
-        fillColor: shock ? '#A8382B' : '#384536',
+        color: shock ? '#EF4444' : '#22C55E',
+        weight: 3.5,
+        fillOpacity: shock ? 0.32 : 0.22,
+        fillColor: shock ? '#EF4444' : '#16A34A',
       }).addTo(parcelLayerGroupRef.current);
 
       try {
-        map.fitBounds(poly.getBounds(), { padding: [35, 35], maxZoom: 16 });
+        map.fitBounds(poly.getBounds(), { padding: [40, 40], maxZoom: 15 });
       } catch {}
       return;
     }
@@ -242,13 +242,17 @@ export default function SplitFieldMap({
       [center[0] + delta, center[1] - delta],
     ];
 
-    L.polygon(defaultBox, {
-      color: shock ? '#A8382B' : '#384536',
+    const defPoly = L.polygon(defaultBox, {
+      color: shock ? '#EF4444' : '#22C55E',
       weight: 2.5,
       dashArray: '4, 4',
-      fillOpacity: shock ? 0.28 : 0.16,
-      fillColor: shock ? '#A8382B' : '#384536',
+      fillOpacity: shock ? 0.28 : 0.18,
+      fillColor: shock ? '#EF4444' : '#16A34A',
     }).addTo(parcelLayerGroupRef.current);
+
+    try {
+      map.setView(center, 14, { animate: true });
+    } catch {}
 
     map.setView(center, map.getZoom() || 15, { animate: true });
   };
@@ -450,7 +454,7 @@ export default function SplitFieldMap({
   };
 
   return (
-    <div className="relative w-full h-[280px] sm:h-[350px] md:h-[380px] rounded-3xl overflow-hidden border border-[#384536]/15 shadow-sm bg-[#222822] select-none">
+    <div className="relative w-full h-[280px] sm:h-[360px] md:h-[420px] lg:h-[480px] xl:h-[500px] rounded-3xl overflow-hidden border border-[#384536]/15 shadow-md bg-[#222822] select-none">
       {/* Real Interactive Leaflet Satellite Canvas (Clean, High-Res, Zero Flashing) */}
       <div
         ref={mapContainerRef}
@@ -463,15 +467,15 @@ export default function SplitFieldMap({
         {!isEditingBounds ? (
           <button
             onClick={handleStartBoundaryEdit}
-            className="pointer-events-auto h-9 px-3.5 rounded-2xl bg-[#FAF7F2]/95 hover:bg-white text-[#243023] hover:text-[#2F6E3E] text-xs font-bold flex items-center gap-2 shadow-md border border-[#384536]/15 transition-all active:scale-95"
+            className="pointer-events-auto h-9 lg:h-11 px-3.5 lg:px-5 rounded-2xl bg-[#FAF7F2]/95 hover:bg-white text-[#243023] hover:text-[#2F6E3E] text-xs lg:text-sm font-bold flex items-center gap-2 shadow-md border border-[#384536]/15 transition-all active:scale-95"
             title={lang === 'ar' ? 'تعديل وتحديد حدود الأرض' : 'Define Farm Boundary'}
           >
-            <span>✏️</span>
+            <span className="lg:text-base">✏️</span>
             <span>{lang === 'ar' ? 'تحديد حدود الحقل' : 'Set Field Bounds'}</span>
           </button>
         ) : (
           /* Active Editing Status Pill */
-          <div className="pointer-events-auto flex items-center gap-2 bg-[#FAF7F2]/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-[#2F6E3E]/40 shadow-lg text-xs font-bold text-[#243023]">
+          <div className="pointer-events-auto flex items-center gap-2 bg-[#FAF7F2]/95 backdrop-blur-md px-3.5 lg:px-5 py-1.5 lg:py-2 rounded-2xl border border-[#2F6E3E]/40 shadow-lg text-xs lg:text-sm font-bold text-[#243023]">
             <span className="w-2 h-2 rounded-full bg-[#2F6E3E] animate-ping shrink-0" />
             <span>{lang === 'ar' ? 'اسحب زوايا المربع لتطابق أرضك' : 'Drag corners to match field'}</span>
             <span className="font-mono text-[#2F6E3E] bg-[#2F6E3E]/10 px-2 py-0.5 rounded-lg">
@@ -481,10 +485,10 @@ export default function SplitFieldMap({
         )}
 
         {/* Right Tools: Recenter & GPS */}
-        <div className="pointer-events-auto flex items-center gap-1.5">
+        <div className="pointer-events-auto flex items-center gap-1.5 lg:gap-2">
           <button
             onClick={handleRecenter}
-            className="w-9 h-9 flex items-center justify-center bg-[#FAF7F2]/95 backdrop-blur-md hover:bg-white text-[#243023] rounded-2xl shadow-md border border-[#384536]/15 text-sm transition-all active:scale-95"
+            className="w-9 h-9 lg:w-11 lg:h-11 flex items-center justify-center bg-[#FAF7F2]/95 backdrop-blur-md hover:bg-white text-[#243023] rounded-2xl shadow-md border border-[#384536]/15 text-sm lg:text-base transition-all active:scale-95"
             title={lang === 'ar' ? 'إعادة التمركز' : 'Recenter'}
           >
             🎯
@@ -493,7 +497,7 @@ export default function SplitFieldMap({
           <button
             onClick={handleGps}
             disabled={isLocating}
-            className="h-9 px-3 flex items-center gap-1.5 bg-[#FAF7F2]/95 backdrop-blur-md hover:bg-white text-[#243023] rounded-2xl shadow-md border border-[#384536]/15 text-xs font-bold transition-all active:scale-95"
+            className="h-9 lg:h-11 px-3 lg:px-4 flex items-center gap-1.5 bg-[#FAF7F2]/95 backdrop-blur-md hover:bg-white text-[#243023] rounded-2xl shadow-md border border-[#384536]/15 text-xs lg:text-sm font-bold transition-all active:scale-95"
             title={lang === 'ar' ? 'موقعي بالـ GPS' : 'GPS Location'}
           >
             <span className={`w-2 h-2 rounded-full ${isLocating ? 'bg-[#B87314] animate-ping' : 'bg-[#2F6E3E]'}`} />
@@ -539,27 +543,27 @@ export default function SplitFieldMap({
 
       {/* Floating Bottom Location Pill & Zoom */}
       <div className="absolute bottom-3.5 inset-x-3.5 z-[1000] flex items-center justify-between pointer-events-none gap-2">
-        <div className="pointer-events-auto bg-[#FAF7F2]/95 backdrop-blur-md px-3.5 py-1.5 rounded-2xl text-xs text-[#243023] flex items-center gap-2 border border-[#384536]/15 shadow-md font-bold max-w-[70%]">
-          <span className="w-2 h-2 rounded-full bg-[#2F6E3E] shrink-0" />
+        <div className="pointer-events-auto bg-[#FAF7F2]/95 backdrop-blur-md px-3.5 lg:px-5 py-1.5 lg:py-2.5 rounded-2xl text-xs lg:text-sm text-[#243023] flex items-center gap-2 lg:gap-3 border border-[#384536]/15 shadow-md font-bold max-w-[70%]">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#2F6E3E] shrink-0" />
           <span className="truncate">{fieldName}</span>
           <span className="text-[#576855]/30 hidden sm:inline">|</span>
-          <span className="font-mono text-[#576855] text-[11px] hidden sm:inline shrink-0">
-            {lat.toFixed(3)}°N, {lon.toFixed(3)}°E
+          <span className="font-mono text-[#576855] text-[11px] lg:text-xs hidden sm:inline shrink-0">
+            {lat.toFixed(4)}°N, {lon.toFixed(4)}°E
           </span>
         </div>
 
         {/* Clean Zoom Buttons */}
-        <div className="pointer-events-auto flex items-center gap-1 bg-[#FAF7F2]/95 backdrop-blur-md p-1 rounded-2xl border border-[#384536]/15 shadow-md">
+        <div className="pointer-events-auto flex items-center gap-1 bg-[#FAF7F2]/95 backdrop-blur-md p-1 lg:p-1.5 rounded-2xl border border-[#384536]/15 shadow-md">
           <button
             onClick={() => handleZoom(1)}
-            className="w-7 h-7 flex items-center justify-center hover:bg-[#EDE6D9] text-[#243023] rounded-xl text-base font-bold active:scale-90 transition-all"
+            className="w-7 h-7 lg:w-9 lg:h-9 flex items-center justify-center hover:bg-[#EDE6D9] text-[#243023] rounded-xl text-base lg:text-lg font-bold active:scale-90 transition-all"
             title="Zoom In"
           >
             +
           </button>
           <button
             onClick={() => handleZoom(-1)}
-            className="w-7 h-7 flex items-center justify-center hover:bg-[#EDE6D9] text-[#243023] rounded-xl text-base font-bold active:scale-90 transition-all"
+            className="w-7 h-7 lg:w-9 lg:h-9 flex items-center justify-center hover:bg-[#EDE6D9] text-[#243023] rounded-xl text-base lg:text-lg font-bold active:scale-90 transition-all"
             title="Zoom Out"
           >
             -

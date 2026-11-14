@@ -253,6 +253,23 @@ export interface RotationStrategy {
   evidenceSummaryEn: string;
   risksAndGapsAr: string;
   risksAndGapsEn: string;
+  economics?: {
+    seasons_evaluated?: number;
+    seasonal_economics?: Array<{
+      crop_id: string;
+      net_profit_per_feddan_egp: number;
+      gross_revenue_per_feddan_egp: number;
+      baseline_input_cost_per_feddan_egp: number;
+      profit_adjusted_per_feddan_egp: number;
+      net_profit_per_ha_usd: number;
+    }>;
+    cumulative_gross_revenue_egp_feddan?: number;
+    cumulative_baseline_cost_egp_feddan?: number;
+    cumulative_net_profit_egp_feddan?: number;
+    cumulative_profit_adjusted_egp_feddan?: number;
+    cumulative_net_profit_usd_ha?: number;
+    cumulative_profit_adjusted_usd_ha?: number;
+  };
 }
 
 export interface DailyTrajectoryPoint {

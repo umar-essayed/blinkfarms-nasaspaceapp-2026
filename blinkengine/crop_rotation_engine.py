@@ -298,13 +298,18 @@ def simulate_single_season(
     # 7. Soil Nitrogen Delta
     soil_n_delta = int(crop["nitrogenFixationKgHa"])
 
-    # 8. Net Economic Gross Margin (USD/ha)
-    gross_rev = crop["avgRevenuePerHa"] * (biomass_ton_ha / 8.0) * (hi_adj / crop["harvestIndexBase"])
-    net_income = int(round(gross_rev - crop["avgCostPerHa"]))
-    if nitrogen_credit_received > 0:
-        net_income += int(round(nitrogen_credit_received * 1.25))
+    # 8. Net Economic Gross Margin (USD/ha) via Single Crop Economics Engine
+    # Physical yield efficiency ratio Ya/Ym bounded [0.20, 1.10]
+    yield_efficiency = float(np.clip((hi_adj / max(0.1, crop["harvestIndexBase"])) * f_water * f_temp * f_salinity, 0.20, 1.10))
+    econ_season = calc_single_crop_economics(
+        crop_id=crop["id"],
+        yield_ratio_ya_ym=yield_efficiency,
+        area_feddan=1.0,
+        urea_bags_saved_per_feddan=convert_n_kg_ha_to_urea_bags_feddan(nitrogen_credit_received)
+    )
+    net_income = int(round(econ_season["net_profit_per_ha_usd"]))
     if is_same_family:
-        net_income -= 120
+        net_income = max(160, net_income - 120)
     net_income = max(160, net_income)
 
     # 9. Bio-Drilling Hardpan Remediation
@@ -517,7 +522,7 @@ def evaluate_6season_sequence(
         "totalUreaBagsSavedPerFeddan": tot_urea_saved,
         "totalFertilizerSavingsEgp": tot_fert_savings_egp,
         "avgFailureRiskPercent": avg_failure_risk,
-        "totalNetProfitUsdHa": tot_net_profit,
+        "totalNetProfitUsdHa": econ_eval["cumulative_net_profit_usd_ha"],
         "soilHealthIndexScore": shi_score,
         "biodrillingRemediated": current_state["biodrillingRemediated"],
         "isMonoculture": is_monoculture,

@@ -68,8 +68,16 @@ export default function CropRotationPlanner({
     cropId.includes('sunflower') ? '🌻' :
     cropId.includes('soybean') ? '🫘' : '🌿';
 
-  const totalEgpPerFeddan = Math.round((activeStrategy?.totalNetProfitUsdHa || 2400) * (49 / 2.3809));
-  const profitPerFeddanK = (totalEgpPerFeddan / 1000).toFixed(0);
+  // Accurate Agronomic Economics: Next Season & 3-Year Cumulative
+  const nextSeasonEcon = activeStrategy?.economics?.seasonal_economics?.[0];
+  const nextSeasonProfitFeddan = nextSeasonEcon?.net_profit_per_feddan_egp
+    ?? Math.round((activeStrategy?.seasons?.[0]?.netIncomeUsdHa || 1650) * (49 / 2.38095));
+  const cumulativeProfitFeddan = activeStrategy?.economics?.cumulative_net_profit_egp_feddan
+    ?? Math.round((activeStrategy?.totalNetProfitUsdHa || 9800) * (49 / 2.38095));
+
+  const seasonProfitK = Math.max(1, Math.round(nextSeasonProfitFeddan / 1000));
+  const totalProfitK = Math.max(1, Math.round(cumulativeProfitFeddan / 1000));
+  const totalFarmK = Math.round((cumulativeProfitFeddan * areaFeddan) / 1000);
   const waterSavedPct = Math.min(100, Math.max(0, activeStrategy?.totalWaterSavedPercent || 0));
   const soilHealthScore = activeStrategy?.soilHealthIndexScore || 88;
 
@@ -215,72 +223,72 @@ export default function CropRotationPlanner({
       {/* =========================================================================
           2. HERO RECOMMENDATION CARD: BEAUTIFUL, CLEAN & AIRY
          ========================================================================= */}
-      <div className="rounded-3xl bg-white border border-[#384536]/10 p-5 sm:p-7 shadow-[0_4px_24px_rgba(56,69,54,0.04)] space-y-6">
+      <div className="rounded-3xl bg-white border border-[#384536]/10 p-5 sm:p-7 lg:p-8 shadow-[0_4px_24px_rgba(56,69,54,0.04)] space-y-6 lg:space-y-8">
         
         {/* Header: Recommended Crop with Icon */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-[#FAF7F2] border border-[#384536]/10 flex items-center justify-center text-4xl shadow-xs shrink-0">
+          <div className="flex items-center gap-4 lg:gap-5">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl lg:rounded-3xl bg-[#FAF7F2] border border-[#384536]/10 flex items-center justify-center text-4xl sm:text-5xl lg:text-6xl shadow-xs shrink-0">
               {cropEmoji}
             </div>
 
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-[#384536]">
+                <span className="text-xs lg:text-sm font-bold text-[#384536]">
                   {lang === 'ar' ? 'المحصول المرشح للعروة القادمة' : 'Next Recommended Crop'}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EDE6D9] text-[#576855]">
+                <span className="text-[10px] lg:text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#EDE6D9] text-[#576855]">
                   {allSeasons[0]?.seasonType === 'winter' ? (lang === 'ar' ? 'عروة شتوية ❄️' : 'Winter') : (lang === 'ar' ? 'عروة صيفية ☀️' : 'Summer')}
                 </span>
               </div>
-              <h3 className="text-2xl sm:text-3xl font-black text-[#243023] mt-0.5">
+              <h3 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-black text-[#243023] mt-0.5">
                 {recommendedCropName}
               </h3>
-              <p className="text-xs text-[#7E907C] font-semibold mt-0.5">
+              <p className="text-xs lg:text-sm text-[#7E907C] font-semibold mt-0.5">
                 {cultivarName} • {areaFeddan} {lang === 'ar' ? 'فدان' : 'feddans'}
               </p>
             </div>
           </div>
 
           {/* Quick Rationale Callout */}
-          <div className="max-w-xs text-xs text-[#576855] bg-[#FAF7F2] p-3 rounded-2xl border border-[#384536]/8 leading-relaxed">
+          <div className="max-w-xs lg:max-w-sm text-xs lg:text-sm text-[#576855] bg-[#FAF7F2] p-3.5 lg:p-4 rounded-2xl border border-[#384536]/8 leading-relaxed">
             <span className="font-bold text-[#384536] block mb-0.5">💡 {lang === 'ar' ? 'سبب الترشيح:' : 'Why:'}</span>
             {agronomicVerdict}
           </div>
         </div>
 
         {/* 3 Metric Pillars: Spacious & Uncluttered */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 pt-2">
           
-          <div className="rounded-2xl bg-[#FAF7F2] p-4 border border-[#384536]/8 space-y-1">
-            <span className="text-xs font-bold text-[#576855] block">💰 {lang === 'ar' ? 'صافي الربح المتوقع' : 'Estimated Profit'}</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-[#2F6E3E]">
-              +{profitPerFeddanK}k
-              <span className="text-xs font-sans font-bold text-[#576855] mr-1.5 rtl:mr-1.5 rtl:ml-0">
+          <div className="rounded-2xl lg:rounded-3xl bg-[#FAF7F2] p-4 lg:p-6 border border-[#384536]/8 space-y-1 lg:space-y-2">
+            <span className="text-xs lg:text-sm font-bold text-[#576855] block">💰 {lang === 'ar' ? 'صافي ربح العروة' : 'Next Season Profit'}</span>
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-[#2F6E3E]">
+              +{seasonProfitK}k
+              <span className="text-xs lg:text-sm font-sans font-bold text-[#576855] mr-1.5 rtl:mr-1.5 rtl:ml-0">
                 {lang === 'ar' ? 'ج/فدان' : 'EGP/fed'}
               </span>
             </div>
-            <p className="text-[11px] text-[#7E907C]">
-              {lang === 'ar' ? `إجمالي ~${Math.round(Number(profitPerFeddanK) * areaFeddan)} ألف ج للمزرعة` : `Farm ~${Math.round(Number(profitPerFeddanK) * areaFeddan)}k EGP`}
+            <p className="text-[11px] lg:text-xs text-[#7E907C] font-medium">
+              {lang === 'ar' ? `إجمالي ٣ سنوات: ~${totalProfitK}k ج/ف (~${totalFarmK} ألف ج للمزرعة)` : `3-Yr Total: ~${totalProfitK}k/fed (~${totalFarmK}k farm)`}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-[#FAF7F2] p-4 border border-[#384536]/8 space-y-1">
-            <span className="text-xs font-bold text-[#576855] block">💧 {lang === 'ar' ? 'ترشيد المياه' : 'Water Saved'}</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-[#384536]">
+          <div className="rounded-2xl lg:rounded-3xl bg-[#FAF7F2] p-4 lg:p-6 border border-[#384536]/8 space-y-1 lg:space-y-2">
+            <span className="text-xs lg:text-sm font-bold text-[#576855] block">💧 {lang === 'ar' ? 'ترشيد المياه' : 'Water Saved'}</span>
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-[#384536]">
               {waterSavedPct > 0 ? (lang === 'ar' ? `وفر ${waterSavedPct}%` : `Save ${waterSavedPct}%`) : (lang === 'ar' ? 'معتاد' : 'Standard')}
             </div>
-            <p className="text-[11px] text-[#7E907C]">
+            <p className="text-[11px] lg:text-xs text-[#7E907C] font-medium">
               {waterSavedPct > 0 ? (lang === 'ar' ? `وفر ${activeStrategy?.totalWaterSavedM3Feddan || 750} م³/فدان` : `Saves ${activeStrategy?.totalWaterSavedM3Feddan || 750} m³/fed`) : (lang === 'ar' ? 'استهلاك طبيعي' : 'Baseline')}
             </p>
           </div>
 
-          <div className="rounded-2xl bg-[#FAF7F2] p-4 border border-[#384536]/8 space-y-1">
-            <span className="text-xs font-bold text-[#576855] block">🌱 {lang === 'ar' ? 'مؤشر خصوبة التربة' : 'Soil Health'}</span>
-            <div className="text-2xl sm:text-3xl font-black font-mono text-[#384536]">
+          <div className="rounded-2xl lg:rounded-3xl bg-[#FAF7F2] p-4 lg:p-6 border border-[#384536]/8 space-y-1 lg:space-y-2">
+            <span className="text-xs lg:text-sm font-bold text-[#576855] block">🌱 {lang === 'ar' ? 'مؤشر خصوبة التربة' : 'Soil Health'}</span>
+            <div className="text-2xl sm:text-3xl lg:text-4xl font-black font-mono text-[#384536]">
               {soilHealthScore}%
             </div>
-            <p className="text-[11px] text-[#7E907C]">
+            <p className="text-[11px] lg:text-xs text-[#7E907C] font-medium">
               {lang === 'ar' ? 'تفكيك الكتمة وزيادة الخصوبة' : 'Soil aeration & bio-N'}
             </p>
           </div>
@@ -315,24 +323,24 @@ export default function CropRotationPlanner({
       {/* =========================================================================
           3. INTERACTIVE 3-YEAR / 6-SEASON ROADMAP & CROP BLUEPRINT
          ========================================================================= */}
-      <div className="rounded-3xl bg-white border border-[#384536]/10 p-5 sm:p-6 shadow-[0_4px_24px_rgba(56,69,54,0.04)] space-y-4">
+      <div className="rounded-3xl bg-white border border-[#384536]/10 p-5 sm:p-6 lg:p-8 shadow-[0_4px_24px_rgba(56,69,54,0.04)] space-y-4 lg:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h3 className="text-sm sm:text-base font-black text-[#243023] flex items-center gap-2">
+            <h3 className="text-sm sm:text-base lg:text-lg font-black text-[#243023] flex items-center gap-2">
               <span>📅</span>
               <span>{lang === 'ar' ? 'خطة تعاقب المحاصيل لـ ٣ سنوات (٦ مواسم)' : '3-Year Succession Roadmap (6 Seasons)'}</span>
             </h3>
-            <p className="text-xs text-[#7E907C] mt-0.5">
+            <p className="text-xs lg:text-sm text-[#7E907C] mt-0.5">
               {lang === 'ar' ? 'اضغط على أي عروة للاطلاع على دليل التسميد، التقاوي، ومواعيد الزراعة' : 'Click any season to view sowing dates, cultivars & fertilizer plan'}
             </p>
           </div>
-          <span className="text-[11px] font-bold text-[#384536] bg-[#EDE6D9] px-2.5 py-1 rounded-full self-start sm:self-auto">
+          <span className="text-[11px] lg:text-xs font-bold text-[#384536] bg-[#EDE6D9] px-3 py-1 rounded-full self-start sm:self-auto">
             {lang === 'ar' ? 'مبني على خوارزمية TOPSIS' : 'TOPSIS Engine'}
           </span>
         </div>
 
         {/* 3 Years Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-5 pt-1">
           {activeStrategy?.years?.map((yr) => {
             const winterSeason = yr.seasons?.[0];
             const summerSeason = yr.seasons?.[1];
@@ -348,19 +356,19 @@ export default function CropRotationPlanner({
             return (
               <div
                 key={yr.year}
-                className="p-3.5 rounded-2xl border border-[#384536]/10 bg-[#FAF7F2] space-y-2.5"
+                className="p-3.5 lg:p-5 rounded-2xl lg:rounded-3xl border border-[#384536]/10 bg-[#FAF7F2] space-y-2.5 lg:space-y-3.5"
               >
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="px-2 py-0.5 rounded-lg text-[10px] bg-[#384536] text-[#FAF7F2]">
+                <div className="flex items-center justify-between text-xs lg:text-sm font-bold">
+                  <span className="px-2.5 py-0.5 rounded-lg text-[10px] lg:text-xs bg-[#384536] text-[#FAF7F2]">
                     {lang === 'ar' ? `السنة ${yr.year}` : `Year ${yr.year}`}
                   </span>
-                  <span className="font-mono text-[#2F6E3E]">
-                    +{Math.round((yr.netIncomeUsdHa || 800) * (49 / 2.3809) / 1000)}k {lang === 'ar' ? 'ج/ف' : 'EGP/fed'}
+                  <span className="font-mono text-[#2F6E3E] text-xs lg:text-sm font-black">
+                    +{Math.round((yr.netIncomeUsdHa || 1600) * (49 / 2.38095) / 1000)}k {lang === 'ar' ? 'ج/ف/سنة' : 'EGP/fed/yr'}
                   </span>
                 </div>
 
                 {/* Season Buttons */}
-                <div className="space-y-1.5 text-xs">
+                <div className="space-y-1.5 lg:space-y-2 text-xs lg:text-sm">
                   {winterSeason && (
                     <button
                       onClick={() => setSelectedSeasonIdx(winterIdx)}
@@ -406,16 +414,16 @@ export default function CropRotationPlanner({
 
         {/* Selected Season Detail Blueprint Card */}
         {currentInspectSeason && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#EDE6D9]/50 border border-[#384536]/15 space-y-3.5 mt-2 animate-fadeIn">
+          <div className="p-4 sm:p-5 lg:p-6 rounded-2xl lg:rounded-3xl bg-[#EDE6D9]/50 border border-[#384536]/15 space-y-3.5 lg:space-y-4 mt-2 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#384536]/10 pb-3">
               <div>
-                <span className="text-[10px] font-bold text-[#7E907C] block uppercase tracking-wider">
+                <span className="text-[10px] lg:text-xs font-bold text-[#7E907C] block uppercase tracking-wider">
                   {lang === 'ar' ? 'الدليل الإرشادي للعروة المختارة' : 'Agronomic Blueprint'}
                 </span>
-                <h4 className="text-base sm:text-lg font-black text-[#243023] flex items-center gap-2">
+                <h4 className="text-base sm:text-lg lg:text-xl font-black text-[#243023] flex items-center gap-2">
                   <span>{currentInspectSeason.seasonType === 'winter' ? '❄️' : '☀️'}</span>
                   <span>{inspectCropName}</span>
-                  <span className="text-xs font-bold text-[#384536] bg-white px-2.5 py-0.5 rounded-full border border-[#384536]/10">
+                  <span className="text-xs lg:text-sm font-bold text-[#384536] bg-white px-3 py-0.5 rounded-full border border-[#384536]/10">
                     {inspectCultivar}
                   </span>
                 </h4>
@@ -423,38 +431,38 @@ export default function CropRotationPlanner({
 
               <button
                 onClick={() => handleAskAgronomist(inspectCropName, inspectCultivar)}
-                className="self-start sm:self-auto px-4 py-2 rounded-xl bg-[#384536] hover:bg-[#253024] text-[#FAF7F2] text-xs font-bold active:scale-95 transition-all shadow-xs"
+                className="self-start sm:self-auto px-5 py-2.5 rounded-xl bg-[#384536] hover:bg-[#253024] text-[#FAF7F2] text-xs lg:text-sm font-bold active:scale-95 transition-all shadow-xs"
               >
                 {lang === 'ar' ? `استشر المرشد في ${inspectCropName} ➔` : `Ask Advisor ➔`}
               </button>
             </div>
 
             {/* 4 Pillars of Agronomic Blueprint */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-              <div className="p-3 rounded-xl bg-white border border-[#384536]/10 space-y-1">
-                <span className="text-[10px] font-bold text-[#7E907C] block">📅 {lang === 'ar' ? 'ميعاد الزراعة' : 'Sowing Window'}</span>
-                <span className="font-bold text-[#243023] block leading-tight">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 lg:gap-4 text-xs lg:text-sm">
+              <div className="p-3.5 lg:p-4 rounded-xl lg:rounded-2xl bg-white border border-[#384536]/10 space-y-1 lg:space-y-1.5">
+                <span className="text-[10px] lg:text-xs font-bold text-[#7E907C] block">📅 {lang === 'ar' ? 'ميعاد الزراعة' : 'Sowing Window'}</span>
+                <span className="font-bold text-[#243023] block leading-tight text-xs lg:text-sm">
                   {lang === 'ar' ? (inspectProfile?.sowingWindows?.deltaAr || 'منتصف الموسم') : (inspectProfile?.sowingWindows?.optimalRangeEn || 'Mid Season')}
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-white border border-[#384536]/10 space-y-1">
-                <span className="text-[10px] font-bold text-[#7E907C] block">🌾 {lang === 'ar' ? 'أفضل صنف معتمد' : 'Certified Seeds'}</span>
-                <span className="font-bold text-[#384536] block leading-tight">
+              <div className="p-3.5 lg:p-4 rounded-xl lg:rounded-2xl bg-white border border-[#384536]/10 space-y-1 lg:space-y-1.5">
+                <span className="text-[10px] lg:text-xs font-bold text-[#7E907C] block">🌾 {lang === 'ar' ? 'أفضل صنف معتمد' : 'Certified Seeds'}</span>
+                <span className="font-bold text-[#384536] block leading-tight text-xs lg:text-sm">
                   {inspectCultivar}
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-white border border-[#384536]/10 space-y-1">
-                <span className="text-[10px] font-bold text-[#7E907C] block">💧 {lang === 'ar' ? 'المقنن المائي' : 'Water Need'}</span>
-                <span className="font-bold text-[#243023] block leading-tight">
+              <div className="p-3.5 lg:p-4 rounded-xl lg:rounded-2xl bg-white border border-[#384536]/10 space-y-1 lg:space-y-1.5">
+                <span className="text-[10px] lg:text-xs font-bold text-[#7E907C] block">💧 {lang === 'ar' ? 'المقنن المائي' : 'Water Need'}</span>
+                <span className="font-bold text-[#243023] block leading-tight text-xs lg:text-sm">
                   ~{currentInspectSeason.season ? Math.round(currentInspectSeason.season.seasonalWaterNeedM3Ha / 2.38) : 2400} {lang === 'ar' ? 'م³/فدان' : 'm³/fed'}
                 </span>
               </div>
 
-              <div className="p-3 rounded-xl bg-white border border-[#384536]/10 space-y-1">
-                <span className="text-[10px] font-bold text-[#7E907C] block">🌱 {lang === 'ar' ? 'التسميد والتربة' : 'Soil Impact'}</span>
-                <span className="font-bold text-[#2F6E3E] block leading-tight">
+              <div className="p-3.5 lg:p-4 rounded-xl lg:rounded-2xl bg-white border border-[#384536]/10 space-y-1 lg:space-y-1.5">
+                <span className="text-[10px] lg:text-xs font-bold text-[#7E907C] block">🌱 {lang === 'ar' ? 'التسميد والتربة' : 'Soil Impact'}</span>
+                <span className="font-bold text-[#2F6E3E] block leading-tight text-xs lg:text-sm">
                   {currentInspectSeason.season?.soilNitrogenDeltaKgHa && currentInspectSeason.season.soilNitrogenDeltaKgHa > 0
                     ? `+${currentInspectSeason.season.soilNitrogenDeltaKgHa} ${lang === 'ar' ? 'كجم N/هكتار' : 'kg N/ha'}`
                     : currentInspectSeason.season?.ureaBagsSavedPerFeddan && currentInspectSeason.season.ureaBagsSavedPerFeddan > 0

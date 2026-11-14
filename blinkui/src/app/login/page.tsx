@@ -253,31 +253,31 @@ export default function LoginPage() {
       />
 
       {/* Top Header */}
-      <header className="w-full max-w-sm sm:max-w-md mx-auto flex justify-between items-center shrink-0">
+      <header className="w-full max-w-sm sm:max-w-md lg:max-w-lg mx-auto flex justify-between items-center shrink-0">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="BlinkFarms Logo" className="w-7 h-7 sm:w-8 sm:h-8 object-contain drop-shadow-xs" />
-          <span className="font-black text-sm tracking-tight text-[#243023]">
+          <img src="/logo.png" alt="BlinkFarms Logo" className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 object-contain drop-shadow-xs" />
+          <span className="font-black text-sm lg:text-base tracking-tight text-[#243023]">
             BlinkFarms
           </span>
         </div>
         <button
           onClick={toggleLang}
-          className="text-[11px] font-bold px-3 py-1 rounded-full bg-[#EDE6D9] hover:bg-[#E2D8C6] border border-[#384536]/10 text-[#243023] active:scale-95 transition-all"
+          className="text-[11px] lg:text-xs font-bold px-3.5 py-1 rounded-full bg-[#EDE6D9] hover:bg-[#E2D8C6] border border-[#384536]/10 text-[#243023] active:scale-95 transition-all"
         >
           {lang === 'ar' ? 'English' : 'عربي'}
         </button>
       </header>
 
       {/* Main Single-Screen Form Card (No Scroll) */}
-      <div className="w-full max-w-sm sm:max-w-md mx-auto bg-white/95 backdrop-blur-2xl rounded-3xl p-4 sm:p-6 shadow-[0_12px_40px_rgba(56,69,54,0.08)] border border-[#384536]/10 space-y-3.5 my-auto shrink-0">
+      <div className="w-full max-w-sm sm:max-w-md lg:max-w-lg mx-auto bg-white/95 backdrop-blur-2xl rounded-3xl p-5 sm:p-7 lg:p-8 shadow-[0_12px_40px_rgba(56,69,54,0.08)] border border-[#384536]/10 space-y-4 my-auto shrink-0">
         {/* Title */}
         <div className="text-center space-y-1">
-          <h1 className="text-lg sm:text-xl font-black text-[#243023] tracking-tight">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-black text-[#243023] tracking-tight">
             {isRegisterMode
               ? (lang === 'ar' ? 'إنشاء حساب مزارع جديد' : 'Create Farmer Account')
               : (lang === 'ar' ? 'تسجيل الدخول' : 'Sign In')}
           </h1>
-          <p className="text-[11px] text-[#576855]">
+          <p className="text-[11px] lg:text-xs text-[#576855]">
             {lang === 'ar'
               ? 'سجّل دخولك لربط بيانات حقلك بمراصد ناسا الفضائية'
               : 'Sign in to access NASA Earth Observation records'}

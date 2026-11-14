@@ -9,6 +9,7 @@ import ToolExecutionBadge from '@/components/ToolExecutionBadge';
 import { SendIcon } from '@/components/Icons';
 import LiveVoiceOverlay from '@/components/LiveVoiceOverlay';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt';
+import { DEMO_FIELDS } from '@/lib/fieldPresets';
 
 export interface ChatSession {
   id: string;
@@ -211,6 +212,23 @@ export default function DedicatedChatPage() {
       } catch {}
     }
 
+    // Read selected project / farm preset
+    const savedPresetId = localStorage.getItem('blinkfarms_selected_preset');
+    if (savedPresetId && savedPresetId !== 'custom') {
+      const p = DEMO_FIELDS.find(f => f.id === savedPresetId);
+      if (p) {
+        setFieldName(savedLang === 'en' ? p.nameEn : p.nameAr);
+        setAreaFeddan(Math.round(p.areaHa * 2.38));
+      }
+    } else if (savedPresetId === 'custom') {
+      const savedCustomName = localStorage.getItem('blinkfarms_custom_name');
+      if (savedCustomName) setFieldName(savedCustomName);
+      const savedArea = localStorage.getItem('blinkfarms_custom_area');
+      if (savedArea) setAreaFeddan(Number(savedArea));
+    } else {
+      setFieldName(savedLang === 'en' ? 'Nile Delta Alluvial Basin (Tanta)' : 'دلتا النيل (طنطا / الغربية)');
+    }
+
     // Load or create initial chat session
     const savedSessions = localStorage.getItem('blinkfarms_chat_sessions_v2');
     if (savedSessions) {
@@ -289,6 +307,18 @@ export default function DedicatedChatPage() {
     localStorage.setItem('blinkfarms_lang', nextLang);
     document.documentElement.lang = nextLang;
     document.documentElement.dir = nextLang === 'ar' ? 'rtl' : 'ltr';
+
+    const savedPresetId = localStorage.getItem('blinkfarms_selected_preset');
+    if (savedPresetId && savedPresetId !== 'custom') {
+      const p = DEMO_FIELDS.find(f => f.id === savedPresetId);
+      if (p) setFieldName(nextLang === 'en' ? p.nameEn : p.nameAr);
+    } else if (savedPresetId === 'custom') {
+      if (fieldName.includes('قطعة محددة') || fieldName.includes('Custom Parcel')) {
+        setFieldName(nextLang === 'ar' ? `قطعة محددة (${areaFeddan} فدان)` : `Custom Parcel (${areaFeddan} fed)`);
+      }
+    } else {
+      setFieldName(nextLang === 'en' ? 'Nile Delta Alluvial Basin (Tanta)' : 'دلتا النيل (طنطا / الغربية)');
+    }
   };
 
   const handleDeleteSession = (sessionIdToDelete: string, e: React.MouseEvent) => {
@@ -727,23 +757,23 @@ export default function DedicatedChatPage() {
         </header>
 
         {/* Messages List Area (Scrolling ONLY here) */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5 space-y-3.5 scrollbar-thin">
-          <div className="max-w-2xl mx-auto space-y-3.5">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 sm:p-5 lg:p-8 space-y-3.5 lg:space-y-5 scrollbar-thin">
+          <div className="max-w-4xl lg:max-w-5xl mx-auto space-y-4">
             {activeSession?.messages.map((m, mIdx) => (
               <div
                 key={m.id}
-                className={`flex gap-2.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-2.5 lg:gap-3.5 ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {m.sender === 'assistant' && (
                   <img
                     src="/blink-ai-logo.png"
                     alt="BlinkAI"
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-[#384536]/30 shadow-sm shrink-0"
+                    className="w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-full object-cover border border-[#384536]/30 shadow-sm shrink-0"
                   />
                 )}
 
                 <div
-                  className={`relative group max-w-[85%] sm:max-w-[75%] rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed shadow-sm ${
+                  className={`relative group max-w-[85%] sm:max-w-[78%] lg:max-w-[75%] rounded-2xl lg:rounded-3xl px-3.5 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-sm lg:text-[16px] leading-relaxed shadow-sm ${
                     m.sender === 'user'
                       ? 'bg-[#384536] text-[#FAF7F2] rounded-br-xs'
                       : 'bg-white text-[#243023] border border-[#384536]/10 rounded-bl-xs'
@@ -840,12 +870,12 @@ export default function DedicatedChatPage() {
 
         {/* Quick Suggestion Chips */}
         {activeSession?.messages.length <= 2 && (
-          <div className="px-3 sm:px-5 py-1.5 shrink-0 overflow-x-auto scrollbar-none flex gap-1.5 max-w-2xl mx-auto w-full">
+          <div className="px-3 sm:px-5 lg:px-8 py-2 shrink-0 overflow-x-auto scrollbar-none flex gap-1.5 lg:gap-2.5 max-w-4xl lg:max-w-5xl mx-auto w-full">
             {QUICK_PROMPTS.map((p, idx) => (
               <button
                 key={idx}
                 onClick={() => handleSendMessage(p)}
-                className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-white hover:bg-[#EDE6D9] border border-[#384536]/10 text-[#576855] whitespace-nowrap active:scale-95 transition-all shrink-0 shadow-xs"
+                className="text-[10px] sm:text-xs lg:text-sm font-semibold px-3 lg:px-4 py-1.5 lg:py-2 rounded-full bg-white hover:bg-[#EDE6D9] border border-[#384536]/10 text-[#576855] whitespace-nowrap active:scale-95 transition-all shrink-0 shadow-xs"
               >
                 {p}
               </button>
@@ -854,19 +884,19 @@ export default function DedicatedChatPage() {
         )}
 
         {/* Fixed Bottom Input Bar */}
-        <div className="shrink-0 bg-[#FAF7F2] border-t border-[#384536]/15 p-3 sm:p-4 pb-4 sm:pb-4 shadow-lg z-20">
+        <div className="shrink-0 bg-[#FAF7F2] border-t border-[#384536]/15 p-3 sm:p-4 lg:p-5 shadow-lg z-20">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSendMessage();
             }}
-            className="max-w-2xl mx-auto flex items-center gap-2"
+            className="max-w-4xl lg:max-w-5xl mx-auto flex items-center gap-2 lg:gap-3"
           >
             {/* 1. Live Voice Mode Button (Clearly labeled with pulsing green badge) */}
             <button
               type="button"
               onClick={() => setIsVoiceOverlayOpen(true)}
-              className="px-3 py-2.5 rounded-2xl bg-[#EDE6D9] hover:bg-[#384536] hover:text-[#FAF7F2] text-[#243023] border border-[#384536]/15 text-xs font-black flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0"
+              className="h-10 lg:h-12 px-3.5 lg:px-5 rounded-2xl bg-[#EDE6D9] hover:bg-[#384536] hover:text-[#FAF7F2] text-[#243023] border border-[#384536]/15 text-xs lg:text-sm font-black flex items-center gap-1.5 lg:gap-2 shadow-xs transition-all active:scale-95 shrink-0"
               title={lang === 'ar' ? 'بدء محادثة صوتية حية (لايف)' : 'Start Live Voice Call'}
             >
               <span className="w-2.5 h-2.5 rounded-full bg-[#2F6E3E] animate-pulse" />
@@ -877,7 +907,7 @@ export default function DedicatedChatPage() {
             <button
               type="button"
               onClick={handleToggleDictation}
-              className={`p-2.5 rounded-2xl border text-sm transition-all active:scale-95 shrink-0 flex items-center justify-center ${
+              className={`h-10 w-10 lg:h-12 lg:w-12 rounded-2xl border text-sm lg:text-base transition-all active:scale-95 shrink-0 flex items-center justify-center ${
                 isDictating
                   ? 'bg-[#A8382B] text-white animate-pulse border-[#A8382B] shadow-md ring-2 ring-[#A8382B]/30'
                   : 'bg-[#EDE6D9] text-[#384536] border-[#384536]/15 hover:bg-[#E3D9C9] shadow-xs'
@@ -894,17 +924,17 @@ export default function DedicatedChatPage() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={isDictating ? (lang === 'ar' ? 'جاري الاستماع لصوتك...' : 'Listening...') : (lang === 'ar' ? 'اسأل عن ري أرضك، الطقس، أو الدورة الزراعية...' : 'Ask about irrigation, weather, or crops...')}
               disabled={isChatLoading}
-              className="flex-1 px-4 py-2.5 rounded-2xl bg-white text-xs sm:text-sm font-medium text-[#243023] placeholder:text-[#7E907C] focus:outline-none focus:ring-2 focus:ring-[#384536] border border-[#384536]/15 shadow-sm min-w-0"
+              className="flex-1 h-10 lg:h-12 px-4 lg:px-5 rounded-2xl bg-white text-xs sm:text-sm lg:text-base font-medium text-[#243023] placeholder:text-[#7E907C] focus:outline-none focus:ring-2 focus:ring-[#384536] border border-[#384536]/15 shadow-sm min-w-0"
             />
 
             {/* 4. Send Message Button */}
             <button
               type="submit"
               disabled={isChatLoading || !inputText.trim()}
-              className="p-2.5 px-3.5 rounded-2xl bg-[#384536] hover:bg-[#253024] disabled:opacity-40 text-[#FAF7F2] shadow-sm active:scale-95 transition-all shrink-0 flex items-center justify-center font-bold text-xs"
+              className="h-10 lg:h-12 px-3.5 lg:px-5 rounded-2xl bg-[#384536] hover:bg-[#253024] disabled:opacity-40 text-[#FAF7F2] shadow-sm active:scale-95 transition-all shrink-0 flex items-center justify-center font-bold text-xs lg:text-sm"
               title={lang === 'ar' ? 'إرسال' : 'Send'}
             >
-              <SendIcon className="w-4 h-4 rtl:rotate-180" />
+              <SendIcon className="w-4 h-4 lg:w-5 lg:h-5 rtl:rotate-180" />
             </button>
           </form>
         </div>
