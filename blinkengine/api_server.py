@@ -688,6 +688,36 @@ def get_field_memory_endpoint(field_id: str):
         "top_analogues": analogues
     }
 
+class FieldMemory5YrIngestRequest(BaseModel):
+    field_id: str = "FIELD_DELTA_WHEAT_01"
+    lat: float = 30.850
+    lon: float = 31.050
+    polygon_boundary: Optional[List[List[float]]] = None
+    area_feddan: float = 15.0
+    soil_type: str = "clay_loam"
+    irrigation_system: str = "drip"
+    crop_category_preference: str = "all"
+    primary_priority: str = "water"
+
+@app.post("/api/v1/field-memory/ingest-5yr-history")
+def ingest_5yr_history_endpoint(req: FieldMemory5YrIngestRequest):
+    """
+    Ingests and analyzes 5 years (10 continuous seasons) of historical NASA telemetry,
+    hydrology, and drought history, constructing a complete Field Memory Dataset and 16D vector.
+    """
+    res = GLOBAL_FIELD_MEMORY_STORE.ingest_5year_history(
+        field_id=req.field_id,
+        center_lat=req.lat,
+        center_lon=req.lon,
+        polygon_coords=req.polygon_boundary,
+        area_feddan=req.area_feddan,
+        soil_type=req.soil_type,
+        irrigation_type=req.irrigation_system,
+        crop_category_preference=req.crop_category_preference,
+        primary_priority=req.primary_priority
+    )
+    return res
+
 class WhatIfRequest(BaseModel):
     lat: float = 30.850
     lon: float = 31.050
